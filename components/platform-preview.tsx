@@ -92,6 +92,17 @@ export default function PlatformPreview() {
   const choose = (id: string) => { setActiveId(id); setNotice('') }
   const action = (message: string) => {
     const normalized = message.toLowerCase()
+    const destinationByAction: Array<[RegExp, string]> = [
+      [/abriendo enlaces de/, 'P-15'],
+      [/abriendo asistencia de/, 'P-16'],
+      [/abriendo muro de dudas de/, role === 'Docente' ? 'P-19' : 'P-11'],
+      [/abriendo tareas de/, role === 'Docente' ? 'P-21' : 'P-13'],
+      [/consultar auditoría completa/, 'P-27'],
+      [/mostrando calendario|ver calendario de la semana/, 'P-33'],
+      [/abriendo el detalle/, role === 'Administrador' ? 'P-23' : role === 'Docente' ? 'P-32' : 'P-08'],
+    ]
+    const destination = destinationByAction.find(([pattern]) => pattern.test(normalized))?.[1]
+    if (destination) { choose(destination); return }
     const dialogByAction: Array<[RegExp, DialogSpec]> = [
       [/cambio de emergencia/, {
         title: 'Cambio de emergencia de enlace (RB-05)',
