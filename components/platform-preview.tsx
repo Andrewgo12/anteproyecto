@@ -49,6 +49,7 @@ const screens: Screen[] = [
   { id: 'P-33', name: 'Mi calendario', route: '/calendario', roles: ['Estudiante','Docente'], group: 'Flujos complementarios' },
   { id: 'P-34', name: 'Abrir en el navegador', route: '/abrir-navegador', roles: ['Estudiante'], group: 'Flujos complementarios' },
   { id: 'P-35', name: 'Guía para instalar la aplicación', route: '/instalar', roles: ['Estudiante','Docente'], group: 'Flujos complementarios' },
+  { id: 'P-36', name: 'Privacidad y datos', route: '/perfil/privacidad', roles: ['Estudiante'], group: 'Flujos complementarios' },
 ]
 
 const iconFor = (group: string) => group === 'Estudiante' ? BookOpen : group === 'Docente' ? GraduationCap : group === 'Administración' ? Settings2 : ShieldCheck
@@ -185,6 +186,7 @@ export default function PlatformPreview() {
           { label: 'Estado inicial', type: 'select', options: ['En planeación', 'Activo para matrículas', 'En curso'] }
         ]
       }],
+      [/solicitar acceso a mis datos/, { title: 'Solicitud de acceso a datos personales', description: 'Registra una solicitud para consultar los datos asociados a la cuenta de demostración.', fields: [{ label: 'Correo institucional', type: 'email', defaultValue: 'kevin.gonzalez@estudiantes.uniajc.edu.co' }, { label: 'Detalle de la solicitud', type: 'textarea', placeholder: 'Indica qué información deseas consultar.' }] }],
       [/edición de perfil/, { title: 'Editar perfil', description: 'Actualiza la información de la cuenta de demostración.', fields: [{ label: 'Nombres', placeholder: 'Kevin Andrés' }, { label: 'Apellidos', placeholder: 'González Dinas' }, { label: 'Correo institucional', type: 'email', placeholder: 'nombre@uniajc.edu.co' }, { label: 'Programa académico', placeholder: 'Ingeniería de Sistemas' }] }],
       [/^crear grupo/, { title: 'Crear grupo académico', description: 'Organiza una nueva clase dentro del periodo académico actual.', fields: [{ label: 'Nombre del grupo', placeholder: '843B' }, { label: 'Curso', placeholder: 'Selecciona o escribe una materia' }, { label: 'Docente responsable', placeholder: 'Nombre del docente' }, { label: 'Jornada y horario', placeholder: 'Mañana · Lunes y miércoles' }] }],
     ]
@@ -229,7 +231,7 @@ export default function PlatformPreview() {
 function LayersIcon() { return <div className="layers-icon"><span /><span /><span /></div> }
 
 function screenTitle(id: string, name: string) {
-  const titles: Record<string,string> = { 'P-07':'¡Hola, Kevin!','P-08':'Clases de hoy','P-09':'Verifica tu presencia','P-10':'Mi asistencia','P-11':'Muro de dudas','P-12':'Herramientas recomendadas','P-13':'Entregas de tus cursos','P-14':'¡Buen día, Javier!','P-15':'Enlaces de mis cursos','P-16':'Asistencia de la sesión','P-17':'Banco de preguntas','P-18':'Reporte de asistencia','P-19':'Dudas de tus estudiantes','P-20':'Herramientas del curso','P-21':'Tareas y semáforo','P-22':'Panel de administración','P-23':'Usuarios','P-24':'Cursos y horarios','P-25':'Matrículas del curso','P-26':'Parámetros del sistema','P-27':'Registro de auditoría','P-28':'Reclamaciones de datos','P-29':'Catálogo académico','P-30':'Grupos académicos','P-31':'Perfiles administrativos','P-32':'Docente: mis grupos','P-33':'Mi calendario' }
+  const titles: Record<string,string> = { 'P-07':'¡Hola, Kevin!','P-08':'Clases de hoy','P-09':'Verifica tu presencia','P-10':'Mi asistencia','P-11':'Muro de dudas','P-12':'Herramientas recomendadas','P-13':'Entregas de tus cursos','P-14':'¡Buen día, Javier!','P-15':'Enlaces de mis cursos','P-16':'Asistencia de la sesión','P-17':'Banco de preguntas','P-18':'Reporte de asistencia','P-19':'Dudas de tus estudiantes','P-20':'Herramientas del curso','P-21':'Tareas y semáforo','P-22':'Panel de administración','P-23':'Usuarios','P-24':'Cursos y horarios','P-25':'Matrículas del curso','P-26':'Parámetros del sistema','P-27':'Registro de auditoría','P-28':'Reclamaciones de datos','P-29':'Catálogo académico','P-30':'Grupos académicos','P-31':'Perfiles administrativos','P-32':'Docente: mis grupos','P-33':'Mi calendario','P-36':'Privacidad y datos' }
   return titles[id] ?? name
 }
 function screenSubtitle(id: string, name: string) {
@@ -260,7 +262,8 @@ function screenSubtitle(id: string, name: string) {
     'P-30':'Organización de grupos académicos, jornadas y cupos del periodo.',
     'P-31':'Definición de perfiles administrativos y niveles de autorización.',
     'P-32':'Tus grupos académicos, horarios y accesos directos de gestión.',
-    'P-33':'Consulta las clases programadas para tus grupos.'
+    'P-33':'Consulta las clases programadas para tus grupos.',
+    'P-36':'Consulta qué datos aparecen en este prototipo y cómo ejercer tus derechos.'
   }
   return captions[id] ?? `Gestiona ${name.toLowerCase()} de forma sencilla y segura.`
 }
@@ -285,6 +288,7 @@ function PrototypeScreen({ id, role, tab, setTab, week, setWeek, action }: { id:
   if (id === 'P-29') return <AcademicCatalogueScreen action={action} />
   if (id === 'P-32') return <TeacherGroupsScreen action={action} />
   if (id === 'P-08') return <ClassesScreen id={id} action={action} />
+  if (id === 'P-36') return <PrivacyScreen action={action} />
   if (id === 'P-04') return <ProfileScreen id={id} action={action} />
   if (id === 'P-05') return <NotificationsScreen action={action} />
   if (id.startsWith('P-2')) return <AdminScreen id={id} tab={tab} setTab={setTab} action={action} />
@@ -630,6 +634,62 @@ function ClassesScreen({id,action}:{id:string;action:(message:string)=>void}) {
 function ProfileScreen({id,action}:{id:string;action:(message:string)=>void}) {
  return <div className="profile-grid"><section className="panel profile-panel"><div className="profile-hero"><div className="avatar profile-avatar">KG</div><div><h2>Kevin Andrés González Dinas</h2><p>Estudiante · Ingeniería de Sistemas</p></div><button className="outline-button" onClick={()=>action('Edición de perfil habilitada')}><Settings2 size={15}/>Editar perfil</button></div><div className="form-grid">{[['Nombres','Kevin Andrés'],['Apellidos','González Dinas'],['Correo institucional','kevin.gonzalez@estudiantes.uniajc.edu.co'],['Código estudiantil','2200417'],['Programa','Ingeniería de Sistemas'],['Semestre','Octavo'],['Jornada','Mañana']].map(([label,value])=><label className="form-field" key={label}>{label}<input defaultValue={value}/></label>)}</div><div className="setting-row"><div><strong>Preferencias de notificación</strong><p>Recibe novedades de tus clases y cursos.</p></div><button className="outline-button" onClick={()=>action('Preferencias de notificación actualizadas')}><Settings2 size={15}/>Configurar</button></div><div className="setting-row"><div><strong>Sesiones abiertas</strong><p>Este dispositivo · Último acceso hoy, 8:42 a. m.</p></div><button className="text-button" onClick={()=>action('Se cerraron otras sesiones')}>Cerrar otras sesiones</button></div><button className="primary-button" onClick={()=>action('Cambios guardados correctamente')}><Check size={16}/>Guardar cambios</button></section><aside className="panel account-aside"><div className="aside-icon"><LockKeyhole size={18}/></div><span className="section-kicker">CUENTA SEGURA</span><h2>Tu información está protegida</h2><p>Usamos tus datos solo para apoyar la gestión de tus clases virtuales.</p><button className="text-button" onClick={()=>action('Abriendo política de privacidad')}>Leer política de privacidad <ArrowRight size={14}/></button></aside></div>
 }
+
+function PrivacyScreen({ action }: { action: (message: string) => void }) {
+  return (
+    <div className="profile-grid">
+      <section className="panel profile-panel">
+        <div className="profile-hero">
+          <div className="aside-icon"><ShieldCheck size={20} /></div>
+          <div>
+            <h2>Tu información, bajo tu control</h2>
+            <p>Revisa el uso de los datos de tu cuenta de demostración.</p>
+          </div>
+        </div>
+        <div className="privacy-callout">
+          <LockKeyhole size={19} />
+          <div>
+            <strong>Este prototipo no guarda información personal</strong>
+            <p>Los nombres, códigos y registros que ves son datos de ejemplo para mostrar la experiencia.</p>
+          </div>
+        </div>
+        <div className="setting-row">
+          <div>
+            <strong>Datos de cuenta</strong>
+            <p>Nombre, correo institucional, código estudiantil y programa académico.</p>
+          </div>
+          <span className="status-pill blue">Demostración</span>
+        </div>
+        <div className="setting-row">
+          <div>
+            <strong>Actividad académica</strong>
+            <p>Clases, asistencia y entregas de ejemplo, visibles en las vistas del prototipo.</p>
+          </div>
+          <span className="status-pill blue">Demostración</span>
+        </div>
+        <div className="setting-row">
+          <div>
+            <strong>Finalidad</strong>
+            <p>Ilustrar la organización de clases virtuales y sus flujos académicos.</p>
+          </div>
+        </div>
+        <button className="primary-button" onClick={() => action('Solicitar acceso a mis datos')}>
+          <FileText size={15} /> Solicitar acceso a mis datos
+        </button>
+      </section>
+      <aside className="panel account-aside">
+        <div className="aside-icon"><ShieldCheck size={18} /></div>
+        <span className="section-kicker">TUS DERECHOS</span>
+        <h2>Consulta o actualiza tus datos</h2>
+        <p>Puedes iniciar una solicitud para conocer qué información está asociada a tu cuenta o pedir su actualización.</p>
+        <button className="text-button" onClick={() => action('Solicitar acceso a mis datos')}>
+          Iniciar una solicitud <ArrowRight size={14} />
+        </button>
+      </aside>
+    </div>
+  )
+}
+
 function NotificationsScreen({action}:{action:(message:string)=>void}) { return <section className="panel data-panel"><div className="data-toolbar"><div><span className="section-kicker">ÚLTIMOS 7 DÍAS</span><h2>Todo está al día</h2></div><button className="text-button" onClick={()=>action('Todas las notificaciones marcadas como leídas')}><CheckCheck size={15}/>Marcar todo como leído</button></div><div className="notification-list">{[['link','Enlace actualizado','El docente publicó un nuevo enlace para Fundamentos de programación.','Hoy, 9:14 a. m.','blue'],['due','Entrega próxima','El Taller 04 vence mañana a las 11:59 p. m.','Ayer, 4:30 p. m.','amber'],['question','Nueva respuesta','Javier Pérez respondió tu pregunta en el muro del curso.','7 oct, 2:10 p. m.','purple']].map(([kind,title,body,time,color])=><article className="notification-row" key={title}><div className={`notification-icon ${color}`}>{kind==='link'?<Link2 size={17}/>:kind==='due'?<Clock3 size={17}/>:<BookOpen size={17}/>}</div><div><strong>{title}</strong><p>{body}</p><small>{time}</small></div><span className="unread-dot"/></article>)}</div></section> }
 function AttendanceReportScreen({ action }: { action: (message: string) => void }) {
   const [filterStudent, setFilterStudent] = useState('')
