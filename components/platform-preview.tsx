@@ -627,8 +627,55 @@ function Dashboard({ id, action }: {id:string; action:(message:string)=>void}) {
 function AgendaItem({time,title,place,status,tone}:{time:string;title:string;place:string;status:string;tone:string}) { return <div className="agenda-item"><span className="agenda-time">{time}<small>{time === '2:00' ? 'p. m.' : 'a. m.'}</small></span><span className="agenda-track"/><div className="agenda-copy"><strong>{title}</strong><small>{place}</small></div><span className={`status-pill ${tone}`}>{status}</span></div> }
 
 function ClassesScreen({id,action}:{id:string;action:(message:string)=>void}) {
- const teacher = id !== 'P-08', today = id === 'P-08'
- return <div className="panel data-panel"><div className="data-toolbar"><div className="segmented"><button className="selected">{today ? 'Hoy' : teacher ? 'Mis cursos' : 'Mis grupos'}</button><button onClick={() => action('Cambiando a vista semanal')}>{today ? 'Esta semana' : 'Archivados'}</button></div><div className="toolbar-actions"><label className="inline-search"><Search size={15}/><input placeholder="Buscar curso" /></label><button className="outline-button" onClick={() => action('Filtro aplicado')}><Filter size={15}/>Filtros</button>{teacher && <button className="primary-button" onClick={() => action('Formulario para publicar enlace')}><Plus size={16}/>Publicar enlace</button>}</div></div><div className="class-list">{[['10:00 a. m.','Fundamentos de programación','841A','Teams','Enlace vigente','blue'],['11:00 a. m.','Matemáticas discretas','841A','Google Meet','Finalizada','muted'],['2:00 p. m.','Bases de datos','831B','Zoom','Próxima clase','amber']].map(([time,title,group,platform,status,tone],i)=><article className="class-row-card" key={title}><div className={`class-date-icon ${i===0?'today':''}`}><span>OCT</span><strong>{8+i}</strong></div><div className="class-row-main"><div className="class-row-title"><strong>{title}</strong><span className={`status-pill ${tone}`}>{status}</span></div><p>{group} · Ingeniería de Sistemas</p><div className="class-row-meta"><span><Clock3 size={13}/>{time}</span><span><Video size={13}/>{platform}</span></div></div><button className="outline-button row-action" onClick={() => action(teacher ? 'Abriendo enlace y opciones del curso' : 'Abriendo enlace de la clase')}>{teacher ? 'Gestionar' : 'Ver clase'} <ArrowRight size={14}/></button></article>)}</div></div>
+  const teacher = id !== 'P-08', today = id === 'P-08'
+  const [view, setView] = useState<'today' | 'week'>('today')
+  const [activeDay, setActiveDay] = useState(3)
+  const week = [
+    { label: 'Lun', date: '05', count: 2 }, { label: 'Mar', date: '06', count: 1 },
+    { label: 'Mié', date: '07', count: 1 }, { label: 'Jue', date: '08', count: 3 },
+    { label: 'Vie', date: '09', count: 1 }, { label: 'Sáb', date: '10', count: 0 },
+    { label: 'Dom', date: '11', count: 0 },
+  ]
+  const weekClasses = [
+    [
+      { time: '8:00 a. m.', title: 'Matemáticas discretas', group: '841A', platform: 'Google Meet', status: 'Primera clase', tone: 'blue' },
+      { time: '10:00 a. m.', title: 'Fundamentos de programación', group: '841A', platform: 'Teams', status: 'Segunda clase', tone: 'purple' },
+    ],
+    [{ time: '9:00 a. m.', title: 'Bases de datos', group: '831B', platform: 'Zoom', status: 'Clase del día', tone: 'amber' }],
+    [{ time: '10:00 a. m.', title: 'Ingeniería de software', group: '841A', platform: 'Teams', status: 'Clase del día', tone: 'purple' }],
+    [
+      { time: '8:00 a. m.', title: 'Matemáticas discretas', group: '841A', platform: 'Google Meet', status: 'Finalizada', tone: 'muted' },
+      { time: '10:00 a. m.', title: 'Fundamentos de programación', group: '841A', platform: 'Teams', status: 'En 20 min', tone: 'blue' },
+      { time: '2:00 p. m.', title: 'Bases de datos', group: '831B', platform: 'Zoom', status: 'Próxima clase', tone: 'amber' },
+    ],
+    [{ time: '11:00 a. m.', title: 'Ingeniería de software', group: '841A', platform: 'Teams', status: 'Clase del día', tone: 'purple' }],
+    [], [],
+  ]
+  const todayClasses = [
+    { time: '10:00 a. m.', title: 'Fundamentos de programación', group: '841A', platform: 'Teams', status: 'Enlace vigente', tone: 'blue' },
+    { time: '11:00 a. m.', title: 'Matemáticas discretas', group: '841A', platform: 'Google Meet', status: 'Finalizada', tone: 'muted' },
+    { time: '2:00 p. m.', title: 'Bases de datos', group: '831B', platform: 'Zoom', status: 'Próxima clase', tone: 'amber' },
+  ]
+  const classes = view === 'week' ? weekClasses[activeDay] : todayClasses
+  return <div className="panel data-panel">
+    <div className="data-toolbar">
+      <div className="segmented">
+        <button className={view === 'today' ? 'selected' : ''} onClick={() => setView('today')}>{today ? 'Hoy' : teacher ? 'Mis cursos' : 'Mis grupos'}</button>
+        <button className={view === 'week' ? 'selected' : ''} onClick={() => setView('week')}>{today ? 'Esta semana' : 'Archivados'}</button>
+      </div>
+      <div className="toolbar-actions"><label className="inline-search"><Search size={15}/><input placeholder="Buscar curso" /></label><button className="outline-button" onClick={() => action('Filtro aplicado')}><Filter size={15}/>Filtros</button>{teacher && <button className="primary-button" onClick={() => action('Formulario para publicar enlace')}><Plus size={16}/>Publicar enlace</button>}</div>
+    </div>
+    {today && view === 'week' && <section className="week-explorer" aria-label="Agenda semanal de clases">
+      <div className="week-explorer-top"><div><span className="section-kicker">SEMANA 41 · OCTUBRE 2026</span><h2>Tu ritmo esta semana</h2><p>Elige un día para ver el recorrido de tus clases.</p></div><div className="week-summary"><strong>8</strong><span>sesiones<br/>programadas</span></div></div>
+      <div className="week-day-selector" role="group" aria-label="Seleccionar día de la semana">
+        {week.map((day, index) => <button key={day.date} className={`week-day-button ${activeDay === index ? 'active' : ''}`} aria-pressed={activeDay === index} aria-label={`${day.label} ${day.date} de octubre, ${day.count ? `${day.count} clases` : 'sin clases'}`} onClick={() => setActiveDay(index)}><span className="week-day-name">{day.label}</span><strong>{day.date}</strong><span className="week-day-count">{day.count ? `${day.count} ${day.count === 1 ? 'clase' : 'clases'}` : 'Libre'}</span><span className={`week-day-mark ${day.count ? 'has-classes' : ''}`} aria-hidden="true" /></button>)}
+      </div>
+      <div className="week-schedule-heading"><div><span className="section-kicker">{['LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO','DOMINGO'][activeDay]} {week[activeDay].date} DE OCTUBRE</span><h3>{week[activeDay].count ? `${week[activeDay].count} ${week[activeDay].count === 1 ? 'clase en tu agenda' : 'clases en tu agenda'}` : 'Un día para recargar'}</h3></div><span className="week-focus-label"><span/> {week[activeDay].count ? 'Día académico' : 'Sin clases'}</span></div>
+      {classes.length ? <div className="week-sessions">{classes.map((item) => <article className="week-session-row" key={`${item.time}-${item.title}`}><div className="week-session-time">{item.time}</div><div className={`week-session-line ${item.tone}`} aria-hidden="true"><span/></div><div className="week-session-copy"><div className="week-session-title"><strong>{item.title}</strong><span className={`status-pill ${item.tone}`}>{item.status}</span></div><span>{item.group} · Ingeniería de Sistemas</span><small><Video size={12}/>{item.platform}</small></div><button className="outline-button row-action" onClick={() => action('Abriendo enlace de la clase')}>Ver clase <ArrowRight size={14}/></button></article>)}</div> : <div className="week-empty"><CalendarDays size={19}/><span>Tu semana también necesita pausas. No hay clases programadas para este día.</span></div>}
+      <div className="week-explorer-footer"><span><i/> Sesión programada</span><span>Los horarios corresponden a tu zona local.</span></div>
+    </section>}
+    {(!today || view === 'today') && <div className="class-list">{classes.map((item, index) => <article className="class-row-card" key={item.title}><div className={`class-date-icon ${index === 0 ? 'today' : ''}`}><span>OCT</span><strong>{view === 'week' ? week[activeDay].date : 8}</strong></div><div className="class-row-main"><div className="class-row-title"><strong>{item.title}</strong><span className={`status-pill ${item.tone}`}>{item.status}</span></div><p>{item.group} · Ingeniería de Sistemas</p><div className="class-row-meta"><span><Clock3 size={13}/>{item.time}</span><span><Video size={13}/>{item.platform}</span></div></div><button className="outline-button row-action" onClick={() => action(teacher ? 'Abriendo enlace y opciones del curso' : 'Abriendo enlace de la clase')}>{teacher ? 'Gestionar' : 'Ver clase'} <ArrowRight size={14}/></button></article>)}</div>}
+  </div>
 }
 
 function ProfileScreen({id,action}:{id:string;action:(message:string)=>void}) {
