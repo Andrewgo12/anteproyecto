@@ -12,10 +12,11 @@ export type DialogField = {
 }
 
 export type DialogSpec = {
-  kind?: 'notifications' | 'receipt'
+  kind?: 'notifications' | 'receipt' | 'menu'
   title?: string
   description?: string
   fields?: DialogField[]
+  menuOptions?: Array<{ label: string; message: string }>
   warning?: string
   receiptData?: {
     student: string
@@ -46,6 +47,7 @@ export default function InteractionDialog({ spec, notificationsRead, onClose, on
   const dialogRef = useRef<HTMLDialogElement>(null)
   const isNotifications = spec.kind === 'notifications'
   const isReceipt = spec.kind === 'receipt'
+  const isMenu = spec.kind === 'menu'
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -86,7 +88,18 @@ export default function InteractionDialog({ spec, notificationsRead, onClose, on
           <button className="dialog-close" type="button" aria-label="Cerrar ventana" onClick={onClose}><X size={17} /></button>
         </header>
 
-        {isNotifications ? (
+        {isMenu ? (
+          <div className="dialog-menu-options" style={{ display: 'grid', gap: 8, paddingTop: 18 }}>
+            {(spec.menuOptions ?? []).map((option) => (
+              <button key={option.message} type="button" className="outline-button" style={{ justifyContent: 'space-between', width: '100%' }} onClick={() => onSave(option.message)}>
+                {option.label}<span aria-hidden="true">→</span>
+              </button>
+            ))}
+            <footer className="dialog-footer">
+              <button className="outline-button" type="button" onClick={onClose}>Cerrar</button>
+            </footer>
+          </div>
+        ) : isNotifications ? (
           <>
             <div className="dialog-notification-list">
               {notificationItems.map(({ icon: Icon, title, body, time, tone }) => (

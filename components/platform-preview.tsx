@@ -98,12 +98,39 @@ export default function PlatformPreview() {
       [/abriendo muro de dudas de/, role === 'Docente' ? 'P-19' : 'P-11'],
       [/abriendo tareas de/, role === 'Docente' ? 'P-21' : 'P-13'],
       [/consultar auditoría completa/, 'P-27'],
-      [/mostrando calendario|ver calendario de la semana/, 'P-33'],
+      [/mostrando calendario|ver calendario de la semana|^ver calendario$/, 'P-33'],
+      [/^ir a mis clases$/, 'P-08'],
+      [/^revisar asistencia$/, role === 'Docente' ? 'P-16' : 'P-10'],
+      [/^gestionar usuarios$/, 'P-23'],
+      [/^ver auditoría$/, 'P-27'],
+      [/^configurar parámetros$/, 'P-26'],
       [/abriendo el detalle/, role === 'Administrador' ? 'P-23' : role === 'Docente' ? 'P-32' : 'P-08'],
     ]
     const destination = destinationByAction.find(([pattern]) => pattern.test(normalized))?.[1]
     if (destination) { choose(destination); return }
     const dialogByAction: Array<[RegExp, DialogSpec]> = [
+      [/opciones de la próxima clase/, {
+        kind: 'menu',
+        title: 'Accesos rápidos',
+        description: 'Elige una sección para continuar con tu jornada.',
+        menuOptions: role === 'Administrador'
+          ? [
+              { label: 'Gestionar usuarios', message: 'Gestionar usuarios' },
+              { label: 'Ver auditoría', message: 'Ver auditoría' },
+              { label: 'Configurar parámetros', message: 'Configurar parámetros' },
+            ]
+          : role === 'Docente'
+            ? [
+                { label: 'Ir a mis clases', message: 'Ir a mis clases' },
+                { label: 'Revisar asistencia', message: 'Revisar asistencia' },
+                { label: 'Ver calendario', message: 'Ver calendario' },
+              ]
+            : [
+                { label: 'Ir a mis clases', message: 'Ir a mis clases' },
+                { label: 'Revisar asistencia', message: 'Revisar asistencia' },
+                { label: 'Ver calendario', message: 'Ver calendario' },
+              ],
+      }],
       [/cambio de emergencia/, {
         title: 'Cambio de emergencia de enlace (RB-05)',
         description: 'Actualización inmediata para resolver imprevistos técnicos sin depender de la ventana de bloqueo.',
@@ -255,7 +282,7 @@ export default function PlatformPreview() {
         </div>
         <footer className="stage-footer"><span><ShieldCheck size={14} /> Datos de ejemplo · No representa información real</span><span>Anteproyecto de grado · UNIAJC <span className="footer-sep">/</span> 2026</span></footer>
         {notice && <div className="toast" role="status"><Check size={16} />{notice}<button aria-label="Cerrar aviso" onClick={() => setNotice('')}><X size={14} /></button></div>}
-        {dialog && <InteractionDialog spec={dialog} notificationsRead={notificationsRead} onClose={() => setDialog(null)} onSave={(message) => { setDialog(null); setNotice(message); window.setTimeout(() => setNotice(''), 2800) }} onMarkNotificationsRead={() => { setNotificationsRead(true); setDialog(null); setNotice('Notificaciones marcadas como leídas'); window.setTimeout(() => setNotice(''), 2800) }} />}
+        {dialog && <InteractionDialog spec={dialog} notificationsRead={notificationsRead} onClose={() => setDialog(null)} onSave={(message) => { setDialog(null); action(message) }} onMarkNotificationsRead={() => { setNotificationsRead(true); setDialog(null); setNotice('Notificaciones marcadas como leídas'); window.setTimeout(() => setNotice(''), 2800) }} />}
         <CommandPalette open={commandOpen} options={commandOptions} onClose={() => setCommandOpen(false)} onChoose={chooseCommand} />
       </main>
     </div>
@@ -653,7 +680,7 @@ function Dashboard({ id, action }: {id:string; action:(message:string)=>void}) {
   return <>
     <div className="welcome-line"><div className="welcome-date"><CalendarDays size={15} /> Jueves, 8 de octubre de 2026 <span>·</span> Jornada mañana</div><button className="text-button" onClick={() => action('Mostrando calendario de la semana')}><CalendarDays size={15} /> Ver calendario</button></div>
     <div className="stat-grid">{(admin ? [['Grupos activos','24','+3 este periodo','blue'],['Estudiantes','846','En 24 grupos','purple'],['Sesiones hoy','18','4 en curso','mint'],['Disponibilidad','99,8%','Últimos 30 días','amber']] : teacher ? [['Mis cursos','4','2 clases esta semana','blue'],['Dudas pendientes','8','3 nuevas hoy','amber'],['Tareas por vencer','3','Próximos 7 días','rose'],['Asistencia reciente','92%','Promedio del periodo','mint']] : [['Clases hoy','3','Próxima a las 10:00 a. m.','blue'],['Asistencia','92%','Este periodo','mint'],['Entregas próximas','2','Una para mañana','amber'],['Dudas respondidas','4','En esta semana','purple']]).map(([label,value,desc,color]) => <div className="stat-card" key={label}><div className={`stat-icon ${color}`}>{label.includes('Clases')||label.includes('Sesiones') ? <CalendarDays size={17}/> : label.includes('Dudas') ? <BookOpen size={17}/> : label.includes('Disponibilidad') ? <Activity size={17}/> : label.includes('Estudiantes') ? <Users size={17}/> : label.includes('Asistencia') ? <ClipboardCheck size={17}/> : <Clock3 size={17}/>}</div><span>{label}</span><strong>{value}</strong><small>{desc}</small></div>)}</div>
-    <div className="dashboard-columns"><section className="panel next-class"><div className="panel-heading"><div><span className="section-kicker">{admin ? 'ACTIVIDAD ACADÉMICA' : 'TU SIGUIENTE CLASE'}</span><h2>{admin ? 'Panorama de hoy' : teacher ? 'Próxima clase' : 'Fundamentos de programación'}</h2></div><button className="more-button" aria-label="Más opciones"><MoreHorizontal size={19}/></button></div><div className="class-detail"><div className="subject-icon"><BookOpen size={20}/></div><div className="class-copy"><strong>{admin ? 'Sesiones activas' : teacher ? 'Ingeniería de software' : 'Fundamentos de programación'}</strong><span>{admin ? '4 clases en curso en sede norte' : 'Grupo 841A · Aula virtual en Teams'}</span></div><span className="time-pill"><span/> {admin ? 'EN VIVO' : '10:00 a. m.'}</span></div><div className="class-meta"><span><Clock3 size={14}/>{admin ? 'Actualizado hace 2 min' : 'Hoy · 10:00 – 11:30 a. m.'}</span><span><Users size={14}/>{admin ? '4 docentes conectados' : '32 estudiantes'}</span></div>{!admin && <div className="join-link"><div className="link-icon"><Link2 size={17}/></div><div><small>ENLACE VIGENTE</small><strong>teams.microsoft.com / reunión-841a</strong></div><button aria-label="Copiar enlace" onClick={() => action('Enlace copiado al portapapeles')}><Link2 size={16}/></button><button className="join-button" onClick={() => action('Abriendo la clase virtual')}>Ingresar <ArrowRight size={15}/></button></div>}</section>
+    <div className="dashboard-columns"><section className="panel next-class"><div className="panel-heading"><div><span className="section-kicker">{admin ? 'ACTIVIDAD ACADÉMICA' : 'TU SIGUIENTE CLASE'}</span><h2>{admin ? 'Panorama de hoy' : teacher ? 'Próxima clase' : 'Fundamentos de programación'}</h2></div><button className="more-button" aria-label="Más opciones de la próxima clase" onClick={() => action('Opciones de la próxima clase')}><MoreHorizontal size={19}/></button></div><div className="class-detail"><div className="subject-icon"><BookOpen size={20}/></div><div className="class-copy"><strong>{admin ? 'Sesiones activas' : teacher ? 'Ingeniería de software' : 'Fundamentos de programación'}</strong><span>{admin ? '4 clases en curso en sede norte' : 'Grupo 841A · Aula virtual en Teams'}</span></div><span className="time-pill"><span/> {admin ? 'EN VIVO' : '10:00 a. m.'}</span></div><div className="class-meta"><span><Clock3 size={14}/>{admin ? 'Actualizado hace 2 min' : 'Hoy · 10:00 – 11:30 a. m.'}</span><span><Users size={14}/>{admin ? '4 docentes conectados' : '32 estudiantes'}</span></div>{!admin && <div className="join-link"><div className="link-icon"><Link2 size={17}/></div><div><small>ENLACE VIGENTE</small><strong>teams.microsoft.com / reunión-841a</strong></div><button aria-label="Copiar enlace" onClick={() => action('Enlace copiado al portapapeles')}><Link2 size={16}/></button><button className="join-button" onClick={() => action('Abriendo la clase virtual')}>Ingresar <ArrowRight size={15}/></button></div>}</section>
     <section className="panel today-panel"><div className="panel-heading"><div><span className="section-kicker">{admin ? 'ESTADO DEL SISTEMA' : 'AGENDA DE HOY'}</span><h2>{admin ? 'Estado general' : 'Tu jornada'}</h2></div><span className="live-tag"><i/> Al día</span></div>{admin ? <div className="system-list"><div><span className="system-dot green"/><span>Servicio de plataforma</span><strong>Operativo</strong></div><div><span className="system-dot green"/><span>Disponibilidad mensual</span><strong>99,8%</strong></div><div><span className="system-dot amber"/><span>Reclamaciones abiertas</span><strong>2 pendientes</strong></div></div> : <div className="agenda-list"><AgendaItem time="8:00" title="Matemáticas discretas" place="Meet · Grupo 841A" status="Finalizada" tone="muted"/><AgendaItem time="10:00" title="Fundamentos de programación" place="Teams · Grupo 841A" status="En 20 min" tone="blue"/><AgendaItem time="2:00" title="Bases de datos" place="Zoom · Grupo 831B" status="Próxima" tone="amber"/></div>}</section></div>
     <div className="bottom-panels"><section className="panel mini-panel"><div className="panel-heading"><div><span className="section-kicker">{admin ? 'GESTIÓN' : 'PARA HOY'}</span><h2>{admin ? 'Accesos rápidos' : teacher ? 'Pendientes del curso' : 'Lo que sigue'}</h2></div><button className="text-button" onClick={() => action('Abriendo el detalle')}>Ver todo <ArrowRight size={14}/></button></div><div className="quick-list">{(admin ? [['+','Crear grupo','Nuevo grupo académico'],['U','Gestionar usuarios','Revisar cuentas activas'],['A','Ver auditoría','Últimos movimientos']] : teacher ? [['?','Responder dudas','3 preguntas nuevas'],['↗','Revisar entregas','2 vencen esta semana'],['✓','Tomar asistencia','Clase de las 10:00 a. m.']] : [['✓','Confirmar asistencia','Fundamentos de programación'],['↗','Entrega de programación','Vence mañana, 11:59 p. m.'],['?','Revisar respuestas','Muro de dudas del curso']]).map(([icon,title,desc])=><button key={title} className="quick-row" onClick={() => action(`${title}: acción de demostración`)}><span className="quick-dot">{icon}</span><span><strong>{title}</strong><small>{desc}</small></span><ChevronRight size={16}/></button>)}</div></section><section className="panel tip-panel"><div className="tip-top"><div className="tip-icon"><Sparkles size={16}/></div><span>UN CONSEJO</span></div><h2>{admin ? 'Tu gestión, más simple' : 'Todo en un solo lugar'}</h2><p>{admin ? 'Organiza los grupos del nuevo periodo desde el módulo de Grupos.' : 'Encuentra enlaces, tareas y avisos de tus cursos sin cambiar de plataforma.'}</p><button className="tip-link" onClick={() => action('Abriendo guía rápida')}>Explorar guía <ArrowRight size={14}/></button></section></div>
   </>
