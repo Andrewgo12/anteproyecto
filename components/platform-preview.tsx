@@ -483,7 +483,7 @@ function StudentAttendanceScreen({ action }: { action: (message: string) => void
             <p className="toolbar-description">Registros de presencia puntual sin captura de fotografías ni datos biométricos (Ley 1581 de 2012).</p>
           </div>
           <div className="segmented">
-            <button className="selected">Fundamentos de programación</button>
+            <button className="selected" type="button" aria-pressed="true">Fundamentos de programación</button>
             <button onClick={() => action('Mostrando Matemáticas discretas')}>Matemáticas discretas</button>
             <button onClick={() => action('Mostrando Bases de datos')}>Bases de datos</button>
           </div>
@@ -577,6 +577,7 @@ function TeacherGroupsScreen({ action }: { action: (message: string) => void }) 
 }
 
 function AttendanceScreen({id,action}:{id:string;action:(message:string)=>void}) {
+ const [page, setPage] = useState(1)
  return (
    <>
      <div className="stat-grid compact-stats">
@@ -643,15 +644,9 @@ function AttendanceScreen({id,action}:{id:string;action:(message:string)=>void})
            </tbody>
          </table>
        </div>
-       <div className="table-footer">
-         <span>Mostrando 5 de 32 estudiantes registrados en la sesión</span>
-         <div>
-           <button aria-label="Página anterior"><ChevronLeft size={16}/></button>
-           <button className="page-number">1</button>
-           <button>2</button>
-           <button>3</button>
-           <button aria-label="Página siguiente"><ChevronRight size={16}/></button>
-         </div>
+         <div className="table-footer">
+         <span>Mostrando 5 de 32 estudiantes · Página {page} de 7</span>
+         <PaginationControls page={page} totalPages={7} onChange={(nextPage) => { setPage(nextPage); action(`Página ${nextPage} seleccionada en la demostración`) }} />
        </div>
      </section>
    </>
@@ -686,6 +681,21 @@ function Dashboard({ id, action }: {id:string; action:(message:string)=>void}) {
   </>
 }
 function AgendaItem({time,title,place,status,tone}:{time:string;title:string;place:string;status:string;tone:string}) { return <div className="agenda-item"><span className="agenda-time">{time}<small>{time === '2:00' ? 'p. m.' : 'a. m.'}</small></span><span className="agenda-track"/><div className="agenda-copy"><strong>{title}</strong><small>{place}</small></div><span className={`status-pill ${tone}`}>{status}</span></div> }
+
+function PaginationControls({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (page: number) => void }) {
+  const firstPage = Math.max(1, Math.min(page - 1, totalPages - 2))
+  const visiblePages = Array.from({ length: Math.min(3, totalPages) }, (_, index) => firstPage + index)
+
+  return (
+    <div role="group" aria-label="Paginación">
+      <button type="button" aria-label="Página anterior" disabled={page <= 1} onClick={() => onChange(page - 1)}><ChevronLeft size={16} /></button>
+      {visiblePages.map((visiblePage) => (
+        <button key={visiblePage} type="button" className={page === visiblePage ? 'page-number' : ''} aria-current={page === visiblePage ? 'page' : undefined} aria-label={`Página ${visiblePage}`} onClick={() => onChange(visiblePage)}>{visiblePage}</button>
+      ))}
+      <button type="button" aria-label="Página siguiente" disabled={page >= totalPages} onClick={() => onChange(page + 1)}><ChevronRight size={16} /></button>
+    </div>
+  )
+}
 
 function ClassesScreen({id,action}:{id:string;action:(message:string)=>void}) {
   const teacher = id !== 'P-08', today = id === 'P-08'
@@ -1146,6 +1156,7 @@ function ResourcesScreen({id,action}:{id:string;action:(message:string)=>void}) 
 
 function EnrollmentManagementScreen({ action }: { action: (message: string) => void }) {
   const [filter, setFilter] = useState('')
+  const [page, setPage] = useState(1)
   const students = [
     { code: '2200384', name: 'Laura Sofía Gómez Morales', email: 'laura.gomez@estudiantes.uniajc.edu.co', date: '01/08/2026', status: 'Activo', tone: 'green' },
     { code: '2200417', name: 'Kevin Andrés González Dinas', email: 'kevin.gonzalez@estudiantes.uniajc.edu.co', date: '01/08/2026', status: 'Activo', tone: 'green' },
@@ -1236,14 +1247,8 @@ function EnrollmentManagementScreen({ action }: { action: (message: string) => v
           </table>
         </div>
         <div className="table-footer">
-          <span>Mostrando {filtered.length} de 32 estudiantes matriculados</span>
-          <div>
-            <button aria-label="Página anterior"><ChevronLeft size={16} /></button>
-            <button className="page-number">1</button>
-            <button>2</button>
-            <button>3</button>
-            <button aria-label="Página siguiente"><ChevronRight size={16} /></button>
-          </div>
+          <span>Mostrando {filtered.length} de 32 matrículas · Página {page} de 8</span>
+          <PaginationControls page={page} totalPages={8} onChange={(nextPage) => { setPage(nextPage); action(`Página ${nextPage} seleccionada en la demostración`) }} />
         </div>
       </section>
     </>
@@ -1517,6 +1522,7 @@ function AcademicCatalogueScreen({ action }: { action: (message: string) => void
 }
 
 function AdminScreen({id,tab,setTab,action}:{id:string;tab:string;setTab:(v:string)=>void;action:(message:string)=>void}) {
+ const [page, setPage] = useState(1)
  const config:Record<string,{title:string;desc:string;columns:string[];rows:string[][]}>={
   'P-23':{title:'Usuarios registrados',desc:'Gestiona las cuentas y permisos institucionales.',columns:['Nombre','Correo institucional','Rol','Estado','Último acceso'],rows:[['Laura Gómez','laura.gomez@estudiantes.uniajc.edu.co','Estudiante','Activo','Hoy, 9:42 a. m.'],['Javier Pérez','javier.perez@uniajc.edu.co','Docente','Activo','Hoy, 8:10 a. m.'],['Mateo Rojas','mateo.rojas@estudiantes.uniajc.edu.co','Estudiante','Activo','Ayer, 4:26 p. m.'],['Sofía Ramírez','sofia.ramirez@uniajc.edu.co','Administrador','Activo','7 oct, 2:11 p. m.']]},
   'P-24':{title:'Cursos y horarios',desc:'Administra la oferta académica del periodo.',columns:['Curso','Programa','Grupo','Horario','Docente'],rows:[['Fundamentos de programación','Ing. de Sistemas','841A','Lun y jue · 10:00 a. m.','Javier Pérez'],['Bases de datos','Ing. de Sistemas','831B','Mar y vie · 2:00 p. m.','Mónica Salazar'],['Matemáticas discretas','Ing. de Sistemas','841A','Lun y mié · 8:00 a. m.','Carlos Ríos'],['Ingeniería de software','Ing. de Sistemas','802A','Mié · 6:00 p. m.','Javier Pérez']]},
@@ -1586,20 +1592,14 @@ function AdminScreen({id,tab,setTab,action}:{id:string;tab:string;setTab:(v:stri
        </table>
      </div>
      <div className="table-footer">
-       <span>Mostrando {data?.rows.length??0} registros · Página 1 de 8</span>
-       <div>
-         <button aria-label="Página anterior"><ChevronLeft size={16}/></button>
-         <button className="page-number">1</button>
-         <button>2</button>
-         <button>3</button>
-         <button aria-label="Página siguiente"><ChevronRight size={16}/></button>
-       </div>
+       <span>Mostrando {data?.rows.length ?? 0} registros · Página {page} de 8</span>
+       <PaginationControls page={page} totalPages={8} onChange={(nextPage) => { setPage(nextPage); action(`Página ${nextPage} seleccionada en la demostración`) }} />
      </div>
    </section>
  )
 }
 
-function CalendarScreen({week,setWeek,action}:{week:number;setWeek:(n:number)=>void;action:(m:string)=>void}) { const days=['Lun 5','Mar 6','Mié 7','Jue 8','Vie 9']; return <section className="panel calendar-panel"><div className="calendar-toolbar"><div className="segmented"><button className="selected">Semana</button><button onClick={()=>action('Vista mensual seleccionada')}>Mes</button></div><div className="calendar-center"><button className="icon-button" aria-label="Semana anterior" onClick={()=>setWeek(week-1)}><ChevronLeft size={17}/></button><strong>{week===0?'5 – 9 de octubre de 2026':week<0?'28 sep – 2 oct de 2026':'12 – 16 de octubre de 2026'}</strong><button className="icon-button" aria-label="Semana siguiente" onClick={()=>setWeek(week+1)}><ChevronRight size={17}/></button></div><button className="outline-button" onClick={()=>setWeek(0)}>Hoy</button></div><div className="calendar-grid"><div className="calendar-time-spacer"/>{days.map((d,i)=><div className={i===3?'day-heading current':'day-heading'} key={d}>{d.split(' ')[0]}<strong>{Number(d.split(' ')[1])+week*7}</strong></div>)}{['8 a. m.','9 a. m.','10 a. m.','11 a. m.','12 p. m.','1 p. m.','2 p. m.','3 p. m.'].map((time,row)=><div className="calendar-row" key={time}><span className="calendar-time">{time}</span>{days.map((day,col)=><div className="calendar-cell" key={day+time}>{(row===2&&col===0||row===4&&col===2||row===6&&col===3)&&<button className={`calendar-event event-${(col+row)%3}`} onClick={()=>action('Abriendo detalle de la clase')}>{row===2?'Fundamentos de programación':row===4?'Matemáticas discretas':'Bases de datos'}<small>{row===2?'10:00 · Teams':row===4?'12:00 · Meet':'2:00 · Zoom'}</small></button>}</div>)}</div>)}</div></section> }
+function CalendarScreen({week,setWeek,action}:{week:number;setWeek:(n:number)=>void;action:(m:string)=>void}) { const days=['Lun 5','Mar 6','Mié 7','Jue 8','Vie 9']; return <section className="panel calendar-panel"><div className="calendar-toolbar"><div className="segmented"><button className="selected" type="button" aria-pressed="true">Semana</button><button type="button" onClick={()=>action('Vista mensual seleccionada')}>Mes</button></div><div className="calendar-center"><button className="icon-button" aria-label="Semana anterior" onClick={()=>setWeek(week-1)}><ChevronLeft size={17}/></button><strong>{week===0?'5 – 9 de octubre de 2026':week<0?'28 sep – 2 oct de 2026':'12 – 16 de octubre de 2026'}</strong><button className="icon-button" aria-label="Semana siguiente" onClick={()=>setWeek(week+1)}><ChevronRight size={17}/></button></div><button className="outline-button" onClick={()=>setWeek(0)}>Hoy</button></div><div className="calendar-grid"><div className="calendar-time-spacer"/>{days.map((d,i)=><div className={i===3?'day-heading current':'day-heading'} key={d}>{d.split(' ')[0]}<strong>{Number(d.split(' ')[1])+week*7}</strong></div>)}{['8 a. m.','9 a. m.','10 a. m.','11 a. m.','12 p. m.','1 p. m.','2 p. m.','3 p. m.'].map((time,row)=><div className="calendar-row" key={time}><span className="calendar-time">{time}</span>{days.map((day,col)=><div className="calendar-cell" key={day+time}>{(row===2&&col===0||row===4&&col===2||row===6&&col===3)&&<button className={`calendar-event event-${(col+row)%3}`} onClick={()=>action('Abriendo detalle de la clase')}>{row===2?'Fundamentos de programación':row===4?'Matemáticas discretas':'Bases de datos'}<small>{row===2?'10:00 · Teams':row===4?'12:00 · Meet':'2:00 · Zoom'}</small></button>}</div>)}</div>)}</div></section> }
 function AttendanceCheck({action}:{action:(m:string)=>void}) { const [step,setStep]=useState(1); return <div className="check-layout"><section className="panel check-card"><div className="check-course"><div className="subject-icon"><BookOpen size={20}/></div><div><strong>Fundamentos de programación</strong><span>Grupo 841A · Javier Pérez</span></div><span className="time-pill"><span/> ABIERTA</span></div><div className="progress-steps">{['Ingreso','Verificación','Confirmación'].map((x,i)=><div className={i+1<=step?'step done':'step'} key={x}><span>{i+1<step?<Check size={13}/>:i+1}</span><small>{x}</small></div>)}</div>{step===1?<div className="check-body"><div className="check-illustration"><ClipboardCheck size={32}/></div><span className="section-kicker">PASO 1 DE 3</span><h2>Registra tu ingreso</h2><p>Confirma que estás en la clase. No necesitas salir de la videollamada.</p><div className="check-info"><Clock3 size={15}/>La verificación estará disponible por 3 minutos.</div><button className="primary-button wide-button" onClick={()=>setStep(2)}>Registrar ingreso <ArrowRight size={16}/></button></div>:step===2?<div className="check-body"><div className="check-illustration"><Sparkles size={30}/></div><span className="section-kicker">PASO 2 DE 3</span><h2>Una pregunta rápida</h2><p>¿Qué estructura permite repetir instrucciones mientras se cumple una condición?</p><div className="choice-list">{['Bucle while','Condicional if','Variable entera'].map((option,i)=><button key={option} onClick={(e)=>{e.currentTarget.classList.add('chosen');setTimeout(()=>setStep(3),350)}}><span className="radio"/>{option}</button>)}</div><div className="check-info"><ShieldCheck size={15}/>Verificación rápida sin captura de datos biométricos.</div></div>:<div className="check-body success-body"><div className="success-check"><Check size={28}/></div><span className="section-kicker">PASO 3 DE 3</span><h2>¡Asistencia registrada!</h2><p>Tu presencia quedó confirmada para esta sesión.</p><div className="attendance-status"><span>Estado de asistencia</span><strong><span/> Presente</strong></div><button className="primary-button wide-button" onClick={()=>action('Puedes volver a la clase')}>Volver a mi clase <ExternalLink size={15}/></button></div>}</section><aside className="panel check-aside"><div className="aside-icon"><ShieldCheck size={18}/></div><h2>Privacidad primero</h2><p>Esta verificación solo confirma tu participación. No se graban imágenes ni se usa reconocimiento facial.</p><button className="text-button" onClick={()=>action('Abriendo información de privacidad')}>Conoce cómo protegemos tus datos <ArrowRight size={14}/></button></aside></div> }
 
 function AuthScreen({id,action}:{id:string;action:(m:string)=>void}) { const login=id==='P-01', reset=id==='P-03'; return <div className="auth-layout"><section className="auth-card"><div className="auth-logo"><div className="brand-mark"><Video size={19}/></div><strong>aula<span>+</span></strong></div><span className="section-kicker">{login?'BIENVENIDO A TU CAMPUS VIRTUAL':reset?'SEGURIDAD DE TU CUENTA':'RECUPERACIÓN DE CUENTA'}</span><h2>{login?'Inicia sesión':reset?'Crea una nueva contraseña':'Recupera tu contraseña'}</h2><p>{login?'Ingresa con tu correo institucional para continuar.':reset?'Elige una contraseña segura para proteger tu cuenta.':'Te enviaremos un enlace de recuperación a tu correo institucional.'}</p><div className="auth-fields">{!login&&reset&&<label className="form-field">Nueva contraseña<input type="password" placeholder="Mínimo 10 caracteres"/></label>}<label className="form-field">Correo institucional<input type="email" placeholder="nombre@uniajc.edu.co" defaultValue={login?'kevin.gonzalez@estudiantes.uniajc.edu.co':''}/></label>{login&&!reset&&<label className="form-field">Contraseña<input type="password" placeholder="Ingresa tu contraseña" defaultValue="uniajc2026"/></label>}{reset&&<label className="form-field">Confirmar contraseña<input type="password" placeholder="Repite tu contraseña"/></label>}</div><button className="primary-button wide-button" onClick={()=>action(login?'Inicio de sesión de demostración':reset?'Contraseña actualizada':'Enlace de recuperación enviado')}>{login?'Iniciar sesión':reset?'Guardar contraseña':'Enviar enlace'} <ArrowRight size={16}/></button>{login&&<button className="auth-link" onClick={()=>action('Vista de recuperación disponible en P-02')}>¿Olvidaste tu contraseña?</button>}<div className="auth-secure"><LockKeyhole size={14}/>Acceso seguro con correo institucional</div></section><aside className="auth-side"><div className="auth-decoration"><span className="decoration-circle circle-one"/><span className="decoration-circle circle-two"/><div className="floating-card"><div className="subject-icon"><CalendarDays size={20}/></div><div><strong>Tu jornada, organizada</strong><small>Clases · Enlaces · Asistencia</small></div><Check size={16}/></div></div><span className="section-kicker">UNIAJC · SEDE NORTE</span><h2>Todo lo que rodea tu clase virtual, en un solo lugar.</h2><p>Conecta con tus cursos, encuentra tus enlaces y mantente al día.</p></aside></div> }
