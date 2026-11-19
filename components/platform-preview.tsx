@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import CommandPalette, { type CommandOption } from '@/components/command-palette'
 import {
   Activity, AlertTriangle, ArrowDownUp, ArrowLeft, ArrowRight, Bell, BookOpen, CalendarDays,
   Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleHelp,
@@ -64,8 +65,29 @@ export default function PlatformPreview() {
   const [tab, setTab] = useState('Todas')
   const [showAll, setShowAll] = useState(false)
   const [week, setWeek] = useState(0)
+  const [commandOpen, setCommandOpen] = useState(false)
   const visibleScreens = useMemo(() => screens.filter((screen) => (showAll || screen.roles.includes(role)) && `${screen.id} ${screen.name}`.toLowerCase().includes(search.toLowerCase())), [role, search, showAll])
+  const commandOptions = useMemo<CommandOption[]>(() => [
+    ...screens.map((screen) => ({ id: screen.id, label: screen.name, description: screen.route, category: screen.group })),
+    { id: 'COMMAND_NOTIFICATIONS', label: 'Centro de notificaciones', description: 'Revisa novedades recientes de tus cursos', category: 'Acciones' },
+    { id: 'COMMAND_HELP', label: 'Ayuda y privacidad', description: 'Consulta la guía y los atajos de teclado', category: 'Acciones' },
+  ], [])
   const current = screens.find((screen) => screen.id === activeId) ?? screens[6]
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setCommandOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+  const chooseCommand = (id: string) => {
+    if (id === 'COMMAND_NOTIFICATIONS') { setDialog({ kind: 'notifications' }); return }
+    if (id === 'COMMAND_HELP') { choose('P-06'); return }
+    choose(id)
+  }
   const selectRole = (next: Role) => { setRole(next); setShowAll(false); const first = screens.find((item) => item.roles.includes(next) && item.group !== 'Acceso y cuenta'); if (first) setActiveId(first.id) }
   const choose = (id: string) => { setActiveId(id); setNotice('') }
   const action = (message: string) => {
@@ -206,7 +228,7 @@ export default function PlatformPreview() {
           {(['Estudiante','Docente','Administrador'] as Role[]).map((item) => <button key={item} className={role === item && !showAll ? 'role-option selected' : 'role-option'} onClick={() => selectRole(item)}>{item === 'Estudiante' ? 'Est.' : item === 'Administrador' ? 'Admin' : item}</button>)}
         </div>
         <button className={showAll ? 'all-views active' : 'all-views'} onClick={() => setShowAll((value) => !value)}><LayersIcon />Todas las vistas <span>{screens.length}</span></button>
-        <label className="screen-search"><Search size={15} /><input aria-label="Buscar vista" placeholder="Buscar pantalla..." value={search} onChange={(event) => setSearch(event.target.value)} /><kbd>⌘ K</kbd></label>
+        <label className="screen-search"><Search size={15} /><input aria-label="Filtrar vistas en el menú" placeholder="Buscar pantalla..." value={search} onChange={(event) => setSearch(event.target.value)} /><button type="button" className="search-shortcut" aria-label="Abrir búsqueda rápida (Control o Command + K)" onClick={() => setCommandOpen(true)}><kbd>⌘ K</kbd></button></label>
         <nav className="screen-nav" aria-label="Navegación del prototipo">
           {groups.map((group) => { const GroupIcon = iconFor(group); return <section className="nav-group" key={group}><div className="nav-heading"><GroupIcon size={14} />{group}<span>{visibleScreens.filter((item) => item.group === group).length}</span></div>{visibleScreens.filter((item) => item.group === group).map((item) => <button key={item.id} onClick={() => choose(item.id)} className={activeId === item.id ? 'screen-link active' : 'screen-link'}><span className="screen-code">{item.id}</span><span>{item.name}</span></button>)}</section> })}
           {visibleScreens.length === 0 && <p className="empty-search">No se encontraron pantallas.</p>}
@@ -223,6 +245,7 @@ export default function PlatformPreview() {
         <footer className="stage-footer"><span><ShieldCheck size={14} /> Datos de ejemplo · No representa información real</span><span>Anteproyecto de grado · UNIAJC <span className="footer-sep">/</span> 2026</span></footer>
         {notice && <div className="toast" role="status"><Check size={16} />{notice}<button aria-label="Cerrar aviso" onClick={() => setNotice('')}><X size={14} /></button></div>}
         {dialog && <InteractionDialog spec={dialog} notificationsRead={notificationsRead} onClose={() => setDialog(null)} onSave={(message) => { setDialog(null); setNotice(message); window.setTimeout(() => setNotice(''), 2800) }} onMarkNotificationsRead={() => { setNotificationsRead(true); setDialog(null); setNotice('Notificaciones marcadas como leídas'); window.setTimeout(() => setNotice(''), 2800) }} />}
+        <CommandPalette open={commandOpen} options={commandOptions} onClose={() => setCommandOpen(false)} onChoose={chooseCommand} />
       </main>
     </div>
   )
