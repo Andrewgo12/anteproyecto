@@ -1599,7 +1599,66 @@ function AdminScreen({id,tab,setTab,action}:{id:string;tab:string;setTab:(v:stri
  )
 }
 
-function CalendarScreen({week,setWeek,action}:{week:number;setWeek:(n:number)=>void;action:(m:string)=>void}) { const days=['Lun 5','Mar 6','Mié 7','Jue 8','Vie 9']; return <section className="panel calendar-panel"><div className="calendar-toolbar"><div className="segmented"><button className="selected" type="button" aria-pressed="true">Semana</button><button type="button" onClick={()=>action('Vista mensual seleccionada')}>Mes</button></div><div className="calendar-center"><button className="icon-button" aria-label="Semana anterior" onClick={()=>setWeek(week-1)}><ChevronLeft size={17}/></button><strong>{week===0?'5 – 9 de octubre de 2026':week<0?'28 sep – 2 oct de 2026':'12 – 16 de octubre de 2026'}</strong><button className="icon-button" aria-label="Semana siguiente" onClick={()=>setWeek(week+1)}><ChevronRight size={17}/></button></div><button className="outline-button" onClick={()=>setWeek(0)}>Hoy</button></div><div className="calendar-grid"><div className="calendar-time-spacer"/>{days.map((d,i)=><div className={i===3?'day-heading current':'day-heading'} key={d}>{d.split(' ')[0]}<strong>{Number(d.split(' ')[1])+week*7}</strong></div>)}{['8 a. m.','9 a. m.','10 a. m.','11 a. m.','12 p. m.','1 p. m.','2 p. m.','3 p. m.'].map((time,row)=><div className="calendar-row" key={time}><span className="calendar-time">{time}</span>{days.map((day,col)=><div className="calendar-cell" key={day+time}>{(row===2&&col===0||row===4&&col===2||row===6&&col===3)&&<button className={`calendar-event event-${(col+row)%3}`} onClick={()=>action('Abriendo detalle de la clase')}>{row===2?'Fundamentos de programación':row===4?'Matemáticas discretas':'Bases de datos'}<small>{row===2?'10:00 · Teams':row===4?'12:00 · Meet':'2:00 · Zoom'}</small></button>}</div>)}</div>)}</div></section> }
+function CalendarScreen({week,setWeek,action}:{week:number;setWeek:(n:number)=>void;action:(m:string)=>void}) {
+  const [view, setView] = useState<'week' | 'month'>('week')
+  const [monthOffset, setMonthOffset] = useState(0)
+  const days = ['Lun 5','Mar 6','Mié 7','Jue 8','Vie 9']
+  const monthStart = new Date(2026, 9 + monthOffset, 1)
+  const gridStart = new Date(monthStart)
+  gridStart.setDate(1 - ((monthStart.getDay() + 6) % 7))
+  const monthDays = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart)
+    date.setDate(gridStart.getDate() + index)
+    return date
+  })
+  const monthTitle = monthStart.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })
+  const monthEvents: Record<number, { title: string; time: string; tone: string }> = {
+    8: { title: 'Fundamentos de programación', time: '10:00 · Teams', tone: 'event-0' },
+    12: { title: 'Matemáticas discretas', time: '12:00 · Meet', tone: 'event-1' },
+    15: { title: 'Bases de datos', time: '2:00 · Zoom', tone: 'event-2' },
+  }
+
+  return (
+    <section className="panel calendar-panel">
+      <div className="calendar-toolbar">
+        <div className="segmented" role="group" aria-label="Vista del calendario">
+          <button className={view === 'week' ? 'selected' : ''} type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>Semana</button>
+          <button className={view === 'month' ? 'selected' : ''} type="button" aria-pressed={view === 'month'} onClick={() => setView('month')}>Mes</button>
+        </div>
+        <div className="calendar-center">
+          <button className="icon-button" aria-label={view === 'week' ? 'Semana anterior' : 'Mes anterior'} onClick={() => view === 'week' ? setWeek(week - 1) : setMonthOffset(monthOffset - 1)}><ChevronLeft size={17}/></button>
+          <strong className={view === 'month' ? 'month-title' : ''}>{view === 'month' ? monthTitle : week === 0 ? '5 – 9 de octubre de 2026' : week < 0 ? '28 sep – 2 oct de 2026' : '12 – 16 de octubre de 2026'}</strong>
+          <button className="icon-button" aria-label={view === 'week' ? 'Semana siguiente' : 'Mes siguiente'} onClick={() => view === 'week' ? setWeek(week + 1) : setMonthOffset(monthOffset + 1)}><ChevronRight size={17}/></button>
+        </div>
+        <button className="outline-button" onClick={() => { setWeek(0); setMonthOffset(0) }}>Hoy</button>
+      </div>
+      {view === 'week' ? (
+        <div className="calendar-grid">
+          <div className="calendar-time-spacer"/>
+          {days.map((day, index) => <div className={index === 3 ? 'day-heading current' : 'day-heading'} key={day}>{day.split(' ')[0]}<strong>{Number(day.split(' ')[1]) + week * 7}</strong></div>)}
+          {['8 a. m.','9 a. m.','10 a. m.','11 a. m.','12 p. m.','1 p. m.','2 p. m.','3 p. m.'].map((time, row) => (
+            <div className="calendar-row" key={time}>
+              <span className="calendar-time">{time}</span>
+              {days.map((day, column) => <div className="calendar-cell" key={day + time}>{(row === 2 && column === 0 || row === 4 && column === 2 || row === 6 && column === 3) && <button className={`calendar-event event-${(column + row) % 3}`} onClick={() => action('Abriendo detalle de la clase')}>{row === 2 ? 'Fundamentos de programación' : row === 4 ? 'Matemáticas discretas' : 'Bases de datos'}<small>{row === 2 ? '10:00 · Teams' : row === 4 ? '12:00 · Meet' : '2:00 · Zoom'}</small></button>}</div>)}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="month-calendar">
+          {['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'].map((day) => <div className="month-weekday" key={day}>{day}</div>)}
+          {monthDays.map((date) => {
+            const inMonth = date.getMonth() === monthStart.getMonth()
+            const event = inMonth && date.getFullYear() === 2026 ? monthEvents[date.getDate()] : undefined
+            return <div className={`month-day ${inMonth ? '' : 'outside-month'}`} key={date.toISOString()}>
+              <span className="month-day-number">{date.getDate()}</span>
+              {event && <button className={`month-event ${event.tone}`} onClick={() => action(`Abriendo ${event.title}`)}><strong>{event.title}</strong><small>{event.time}</small></button>}
+            </div>
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
 function AttendanceCheck({action}:{action:(m:string)=>void}) { const [step,setStep]=useState(1); return <div className="check-layout"><section className="panel check-card"><div className="check-course"><div className="subject-icon"><BookOpen size={20}/></div><div><strong>Fundamentos de programación</strong><span>Grupo 841A · Javier Pérez</span></div><span className="time-pill"><span/> ABIERTA</span></div><div className="progress-steps">{['Ingreso','Verificación','Confirmación'].map((x,i)=><div className={i+1<=step?'step done':'step'} key={x}><span>{i+1<step?<Check size={13}/>:i+1}</span><small>{x}</small></div>)}</div>{step===1?<div className="check-body"><div className="check-illustration"><ClipboardCheck size={32}/></div><span className="section-kicker">PASO 1 DE 3</span><h2>Registra tu ingreso</h2><p>Confirma que estás en la clase. No necesitas salir de la videollamada.</p><div className="check-info"><Clock3 size={15}/>La verificación estará disponible por 3 minutos.</div><button className="primary-button wide-button" onClick={()=>setStep(2)}>Registrar ingreso <ArrowRight size={16}/></button></div>:step===2?<div className="check-body"><div className="check-illustration"><Sparkles size={30}/></div><span className="section-kicker">PASO 2 DE 3</span><h2>Una pregunta rápida</h2><p>¿Qué estructura permite repetir instrucciones mientras se cumple una condición?</p><div className="choice-list">{['Bucle while','Condicional if','Variable entera'].map((option,i)=><button key={option} onClick={(e)=>{e.currentTarget.classList.add('chosen');setTimeout(()=>setStep(3),350)}}><span className="radio"/>{option}</button>)}</div><div className="check-info"><ShieldCheck size={15}/>Verificación rápida sin captura de datos biométricos.</div></div>:<div className="check-body success-body"><div className="success-check"><Check size={28}/></div><span className="section-kicker">PASO 3 DE 3</span><h2>¡Asistencia registrada!</h2><p>Tu presencia quedó confirmada para esta sesión.</p><div className="attendance-status"><span>Estado de asistencia</span><strong><span/> Presente</strong></div><button className="primary-button wide-button" onClick={()=>action('Puedes volver a la clase')}>Volver a mi clase <ExternalLink size={15}/></button></div>}</section><aside className="panel check-aside"><div className="aside-icon"><ShieldCheck size={18}/></div><h2>Privacidad primero</h2><p>Esta verificación solo confirma tu participación. No se graban imágenes ni se usa reconocimiento facial.</p><button className="text-button" onClick={()=>action('Abriendo información de privacidad')}>Conoce cómo protegemos tus datos <ArrowRight size={14}/></button></aside></div> }
 
 function AuthScreen({id,action}:{id:string;action:(m:string)=>void}) { const login=id==='P-01', reset=id==='P-03'; return <div className="auth-layout"><section className="auth-card"><div className="auth-logo"><div className="brand-mark"><Video size={19}/></div><strong>aula<span>+</span></strong></div><span className="section-kicker">{login?'BIENVENIDO A TU CAMPUS VIRTUAL':reset?'SEGURIDAD DE TU CUENTA':'RECUPERACIÓN DE CUENTA'}</span><h2>{login?'Inicia sesión':reset?'Crea una nueva contraseña':'Recupera tu contraseña'}</h2><p>{login?'Ingresa con tu correo institucional para continuar.':reset?'Elige una contraseña segura para proteger tu cuenta.':'Te enviaremos un enlace de recuperación a tu correo institucional.'}</p><div className="auth-fields">{!login&&reset&&<label className="form-field">Nueva contraseña<input type="password" placeholder="Mínimo 10 caracteres"/></label>}<label className="form-field">Correo institucional<input type="email" placeholder="nombre@uniajc.edu.co" defaultValue={login?'kevin.gonzalez@estudiantes.uniajc.edu.co':''}/></label>{login&&!reset&&<label className="form-field">Contraseña<input type="password" placeholder="Ingresa tu contraseña" defaultValue="uniajc2026"/></label>}{reset&&<label className="form-field">Confirmar contraseña<input type="password" placeholder="Repite tu contraseña"/></label>}</div><button className="primary-button wide-button" onClick={()=>action(login?'Inicio de sesión de demostración':reset?'Contraseña actualizada':'Enlace de recuperación enviado')}>{login?'Iniciar sesión':reset?'Guardar contraseña':'Enviar enlace'} <ArrowRight size={16}/></button>{login&&<button className="auth-link" onClick={()=>action('Vista de recuperación disponible en P-02')}>¿Olvidaste tu contraseña?</button>}<div className="auth-secure"><LockKeyhole size={14}/>Acceso seguro con correo institucional</div></section><aside className="auth-side"><div className="auth-decoration"><span className="decoration-circle circle-one"/><span className="decoration-circle circle-two"/><div className="floating-card"><div className="subject-icon"><CalendarDays size={20}/></div><div><strong>Tu jornada, organizada</strong><small>Clases · Enlaces · Asistencia</small></div><Check size={16}/></div></div><span className="section-kicker">UNIAJC · SEDE NORTE</span><h2>Todo lo que rodea tu clase virtual, en un solo lugar.</h2><p>Conecta con tus cursos, encuentra tus enlaces y mantente al día.</p></aside></div> }
