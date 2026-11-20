@@ -5,9 +5,9 @@ import CommandPalette, { type CommandOption } from '@/components/command-palette
 import {
   Activity, AlertTriangle, ArrowDownUp, ArrowLeft, ArrowRight, Bell, BookOpen, CalendarDays,
   Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleHelp,
-  ClipboardCheck, Clock3, Download, ExternalLink, FileCheck2, FileText, Filter, Flag,
-  GraduationCap, Link2, LockKeyhole, LogOut, MoreHorizontal, Plus, Search,
-  Settings2, ShieldCheck, Sparkles, Users, Video, X,
+  ClipboardCheck, Clock3, Download, ExternalLink, Eye, EyeOff, FileCheck2, FileText, Filter, Flag,
+  GraduationCap, KeyRound, Link2, LockKeyhole, LogOut, Menu, MoreHorizontal, Plus, Search,
+  Settings2, ShieldCheck, Sparkles, Trash2, UploadCloud, User, Users, Video, X,
 } from 'lucide-react'
 import InteractionDialog, { type DialogSpec } from '@/components/interaction-dialog'
 
@@ -66,31 +66,72 @@ export default function PlatformPreview() {
   const [showAll, setShowAll] = useState(false)
   const [week, setWeek] = useState(0)
   const [commandOpen, setCommandOpen] = useState(false)
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   const visibleScreens = useMemo(() => screens.filter((screen) => (showAll || screen.roles.includes(role)) && `${screen.id} ${screen.name}`.toLowerCase().includes(search.toLowerCase())), [role, search, showAll])
   const commandOptions = useMemo<CommandOption[]>(() => [
     ...screens.map((screen) => ({ id: screen.id, label: screen.name, description: screen.route, category: screen.group })),
     { id: 'COMMAND_NOTIFICATIONS', label: 'Centro de notificaciones', description: 'Revisa novedades recientes de tus cursos', category: 'Acciones' },
     { id: 'COMMAND_HELP', label: 'Ayuda y privacidad', description: 'Consulta la guía y los atajos de teclado', category: 'Acciones' },
+    { id: 'COMMAND_SHORTCUTS', label: 'Atajos de teclado', description: 'Consulta las combinaciones de teclas de la plataforma', category: 'Acciones' },
   ], [])
   const current = screens.find((screen) => screen.id === activeId) ?? screens[6]
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const isInput = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
         setCommandOpen(true)
+      } else if (event.key === '?' && !isInput) {
+        event.preventDefault()
+        setDialog({ kind: 'shortcuts' })
+      } else if (event.altKey && event.key === '1' && !isInput) {
+        event.preventDefault()
+        selectRole('Estudiante')
+      } else if (event.altKey && event.key === '2' && !isInput) {
+        event.preventDefault()
+        selectRole('Docente')
+      } else if (event.altKey && event.key === '3' && !isInput) {
+        event.preventDefault()
+        selectRole('Administrador')
+      } else if (event.key === 'Escape') {
+        setAccountMenuOpen(false)
+        setMobileMenuOpen(false)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
+
   const chooseCommand = (id: string) => {
     if (id === 'COMMAND_NOTIFICATIONS') { setDialog({ kind: 'notifications' }); return }
     if (id === 'COMMAND_HELP') { choose('P-06'); return }
+    if (id === 'COMMAND_SHORTCUTS') { setDialog({ kind: 'shortcuts' }); return }
     choose(id)
   }
-  const selectRole = (next: Role) => { setRole(next); setShowAll(false); const first = screens.find((item) => item.roles.includes(next) && item.group !== 'Acceso y cuenta'); if (first) setActiveId(first.id) }
-  const choose = (id: string) => { setActiveId(id); setNotice('') }
-  const action = (message: string) => {
+
+  const selectRole = (next: Role) => {
+    setRole(next)
+    setShowAll(false)
+    const first = screens.find((item) => item.roles.includes(next) && item.group !== 'Acceso y cuenta')
+    if (first) setActiveId(first.id)
+    setNotice(`Rol cambiado a ${next} (Demostración interactiva de prototipo)`)
+    window.setTimeout(() => setNotice(''), 2400)
+  }
+
+  const choose = (id: string) => {
+    setActiveId(id)
+    setNotice('')
+    setMobileMenuOpen(false)
+  }
+
+  const action = (message: string, customSpec?: DialogSpec) => {
+    if (customSpec) {
+      setDialog(customSpec)
+      return
+    }
     const normalized = message.toLowerCase()
     const dialogByAction: Array<[RegExp, DialogSpec]> = [
       [/cambio de emergencia/, {
@@ -133,6 +174,38 @@ export default function PlatformPreview() {
           verification: 'Pregunta conceptual respondida en 38 s (Bucle while) · Intento 1 de 2',
           hash: 'UNIAJC-VERIF-2026-841A-2200417-8A39F'
         }
+      }],
+      [/subir entrega|cargar entrega|adjuntar tarea/, {
+        kind: 'upload_assignment',
+        title: 'Subir entrega de actividad',
+        description: 'Adjunta el archivo comprimido o documento antes de la fecha límite programada.'
+      }],
+      [/atajos de teclado/, {
+        kind: 'shortcuts'
+      }],
+      [/cerrar sesión/, {
+        kind: 'confirm_destructive',
+        title: '¿Cerrar sesión institucional?',
+        description: 'Se cerrará el acceso de tu cuenta de demostración en este dispositivo.',
+        warning: 'Si tienes formularios o borradores sin guardar, no se conservarán.',
+        destructiveConfirmText: 'Cerrar sesión institucional'
+      }],
+      [/solicitar supresión|eliminar cuenta/, {
+        kind: 'confirm_destructive',
+        title: 'Solicitud formal de supresión de datos (Ley 1581 de 2012)',
+        description: 'La supresión procederá conforme al Decreto 1377 de 2013, considerando los deberes legales de conservación de registros académicos de la UNIAJC.',
+        warning: 'Atención: Los registros históricos de notas y títulos universitarios no pueden ser eliminados por mandato legal del Ministerio de Educación Nacional.',
+        destructiveConfirmText: 'Radicar solicitud formal de supresión'
+      }],
+      [/preferencias de notificación/, {
+        title: 'Preferencias de notificación institucional',
+        description: 'Configura por qué canales y con qué frecuencia deseas recibir novedades de tus cursos.',
+        fields: [
+          { label: 'Avisos de enlaces y emergencias (RB-05)', type: 'select', options: ['Instantáneo por correo y push', 'Solo correo institucional', 'Solo push en plataforma'] },
+          { label: 'Recordatorios de entregas y tareas (semáforo)', type: 'select', options: ['24 horas antes del vencimiento', '48 horas antes', 'El mismo día por la mañana', 'Desactivado'] },
+          { label: 'Respuestas en el muro de dudas', type: 'select', options: ['Inmediato', 'Resumen diario a las 6:00 p. m.', 'Solo menciones directas'] },
+          { label: 'Constancias de asistencia digitales (RB-12)', type: 'select', options: ['Envío automático al correo institucional', 'Solo guardar en mi historial'] }
+        ]
       }],
       [/crear usuario/, {
         title: 'Registrar nuevo usuario institucional',
@@ -178,15 +251,36 @@ export default function PlatformPreview() {
           { label: 'Periodo académico', defaultValue: '2026-2' }
         ]
       }],
-      [/inspeccionar carga útil/, {
-        title: 'Inspección de bloque criptográfico (RB-14)',
-        description: 'Detalle de auditoría inmutable con sello de tiempo y resumen SHA-256.',
-        fields: [
-          { label: 'Hash SHA-256 del bloque', defaultValue: '7f3a9e14c0b29845d16a8c3d91f24e0b5832a1e948c27183fa4192b0e6d8a351' },
-          { label: 'Tipo de evento y actor', defaultValue: 'CAMBIO_EMERGENCIA_ENLACE (RB-05) · Javier Pérez Campo' },
-          { label: 'Entidad y timestamp', defaultValue: 'Sesión 09 Grupo 841A · 2026-10-08T09:42:15-05:00' },
-          { label: 'Carga útil verificada (JSON)', type: 'textarea', defaultValue: '{\n  "motivo": "Caída o inestabilidad de Teams",\n  "enlaceAnterior": "https://teams.microsoft.com/l/meetup-841a",\n  "enlaceNuevo": "https://meet.google.com/abc-defg-hij",\n  "estudiantesNotificados": 32,\n  "integridadHash": "OK"\n}' }
-        ]
+      [/inspeccionar carga útil|inspeccionar bloque/, {
+        kind: 'drawer',
+        drawerData: {
+          title: 'Bloque #1482 · CAMBIO_EMERGENCIA_ENLACE (RB-05)',
+          subtitle: 'Sesión 09 · Fundamentos de programación · Grupo 841A',
+          kicker: 'CADENA CRIPTOGRÁFICA INMUTABLE (SHA-256)',
+          sections: [
+            { label: 'Identificador del bloque SHA-256', value: '7f3a9e14c0b29845d16a8c3d91f24e0b5832a1e948c27183fa4192b0e6d8a351', isCode: true },
+            { label: 'Fecha y hora con sello de tiempo NTP', value: 'Jueves, 8 de octubre de 2026 · 09:42:15.318 -05:00' },
+            { label: 'Actor responsable y rol', value: 'Javier Pérez Campo · Docente Titular (DOC-4182)' },
+            { label: 'IP de origen y User-Agent', value: '181.61.204.12 · Chrome 128 / Windows 11', isCode: true },
+            { label: 'Estado de verificación institucional', value: 'Firmado y verificado (DTIC)', isBadge: true, badgeTone: 'green' }
+          ],
+          jsonPayload: JSON.stringify({
+            version: '2.0',
+            evento: 'CAMBIO_EMERGENCIA_ENLACE',
+            regla_negocio: 'RB-05',
+            curso_id: 'SIS-101',
+            grupo: '841A',
+            sesion_numero: 9,
+            timestamp_utc: '2026-10-08T14:42:15.318Z',
+            motivo_declarado: 'Caída de sala virtual previa en Teams',
+            enlace_anterior: 'https://teams.microsoft.com/l/meetup-841a',
+            enlace_nuevo: 'https://teams.microsoft.com/l/meetup-841a-v2',
+            estudiantes_notificados: 32,
+            notificacion_push_exitosa: true,
+            hash_bloque_previo: '319c5a4d89012349e190248ab0912f8409128390fca9012839efa019283901a2',
+            hash_sha256_bloque: '7f3a9e14c0b29845d16a8c3d91f24e0b5832a1e948c27183fa4192b0e6d8a351'
+          }, null, 2)
+        }
       }],
       [/nueva asignatura/, {
         title: 'Crear nueva asignatura en el catálogo (F-ADM-12)',
@@ -208,8 +302,8 @@ export default function PlatformPreview() {
           { label: 'Estado inicial', type: 'select', options: ['En planeación', 'Activo para matrículas', 'En curso'] }
         ]
       }],
-      [/solicitar acceso a mis datos/, { title: 'Solicitud de acceso a datos personales', description: 'Registra una solicitud para consultar los datos asociados a la cuenta de demostración.', fields: [{ label: 'Correo institucional', type: 'email', defaultValue: 'kevin.gonzalez@estudiantes.uniajc.edu.co' }, { label: 'Detalle de la solicitud', type: 'textarea', placeholder: 'Indica qué información deseas consultar.' }] }],
-      [/edición de perfil/, { title: 'Editar perfil', description: 'Actualiza la información de la cuenta de demostración.', fields: [{ label: 'Nombres', placeholder: 'Kevin Andrés' }, { label: 'Apellidos', placeholder: 'González Dinas' }, { label: 'Correo institucional', type: 'email', placeholder: 'nombre@uniajc.edu.co' }, { label: 'Programa académico', placeholder: 'Ingeniería de Sistemas' }] }],
+      [/solicitar acceso a mis datos/, { title: 'Solicitud de acceso a datos personales (Habeas Data)', description: 'Radica una petición formal de consulta conforme a la Ley 1581 de 2012 (plazo legal perentorio: 15 días hábiles).', fields: [{ label: 'Radicado oficial automático', defaultValue: 'RD-2026-015' }, { label: 'Correo institucional titular', type: 'email', defaultValue: 'kevin.gonzalez@estudiantes.uniajc.edu.co' }, { label: 'Detalle de la solicitud de información', type: 'textarea', placeholder: 'Indica los datos de asistencia o actividad que deseas consultar formalmente.' }] }],
+      [/edición de perfil/, { title: 'Editar perfil institucional', description: 'Actualiza los datos de tu cuenta de demostración.', fields: [{ label: 'Nombres', placeholder: 'Kevin Andrés' }, { label: 'Apellidos', placeholder: 'González Dinas' }, { label: 'Correo institucional', type: 'email', placeholder: 'nombre@uniajc.edu.co' }, { label: 'Programa académico', placeholder: 'Ingeniería de Sistemas' }] }],
       [/^crear grupo/, { title: 'Crear grupo académico', description: 'Organiza una nueva clase dentro del periodo académico actual.', fields: [{ label: 'Nombre del grupo', placeholder: '843B' }, { label: 'Curso', placeholder: 'Selecciona o escribe una materia' }, { label: 'Docente responsable', placeholder: 'Nombre del docente' }, { label: 'Jornada y horario', placeholder: 'Mañana · Lunes y miércoles' }] }],
     ]
     const matchingDialog = dialogByAction.find(([pattern]) => pattern.test(normalized))
@@ -221,7 +315,7 @@ export default function PlatformPreview() {
 
   return (
     <div className="platform-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="brand"><div className="brand-mark"><Video size={19} strokeWidth={2.3} /></div><div><strong>aula<span>+</span></strong><small>UNIAJC · Sede Norte</small></div></div>
         <div className="role-caption">VISTA DEL PROTOTIPO</div>
         <div className="role-switch" role="group" aria-label="Seleccionar rol">
@@ -233,16 +327,77 @@ export default function PlatformPreview() {
           {groups.map((group) => { const GroupIcon = iconFor(group); return <section className="nav-group" key={group}><div className="nav-heading"><GroupIcon size={14} />{group}<span>{visibleScreens.filter((item) => item.group === group).length}</span></div>{visibleScreens.filter((item) => item.group === group).map((item) => <button key={item.id} onClick={() => choose(item.id)} className={activeId === item.id ? 'screen-link active' : 'screen-link'}><span className="screen-code">{item.id}</span><span>{item.name}</span></button>)}</section> })}
           {visibleScreens.length === 0 && <p className="empty-search">No se encontraron pantallas.</p>}
         </nav>
-        <div className="sidebar-footer"><div className="avatar avatar-small">KG</div><div><strong>Kevin González</strong><small>Cuenta de demostración</small></div><button aria-label="Cerrar sesión" onClick={() => choose('P-01')}><LogOut size={16} /></button></div>
+        <div className="sidebar-footer">
+          <div className="avatar avatar-small">KG</div>
+          <div><strong>Kevin González</strong><small>{role} · Sede Norte</small></div>
+          <button aria-label="Cerrar sesión" title="Cerrar sesión institucional" onClick={() => action('Cerrar sesión')}><LogOut size={16} /></button>
+        </div>
       </aside>
 
       <main className="workspace">
-        <header className="topbar"><div className="breadcrumbs"><span>Prototipo</span><ChevronRight size={14} /><span>{current.group}</span><ChevronRight size={14} /><strong>{current.name}</strong></div><div className="top-actions"><span className="preview-badge"><span /> Vista preliminar</span><button className="icon-button" aria-label="Ayuda" onClick={() => choose('P-06')}><CircleHelp size={18} /></button><button className="icon-button notification-trigger" aria-label="Abrir centro de notificaciones" onClick={() => setDialog({ kind: 'notifications' })}><Bell size={18} />{!notificationsRead && <i />}</button><div className="avatar">KG</div></div></header>
+        <header className="topbar">
+          <div className="breadcrumbs">
+            <button className="mobile-menu-btn" aria-label="Abrir navegación móvil" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              <Menu size={18} />
+            </button>
+            <button className="breadcrumb-btn" onClick={() => choose(role === 'Estudiante' ? 'P-07' : role === 'Docente' ? 'P-14' : 'P-22')}>Prototipo</button>
+            <ChevronRight size={13} />
+            <button className="breadcrumb-btn" onClick={() => setShowAll(true)}>{current.group}</button>
+            <ChevronRight size={13} />
+            <strong className="breadcrumb-btn active">{current.name}</strong>
+          </div>
+          <div className="top-actions">
+            <span className="preview-badge"><span /> Vista preliminar</span>
+            <button className="icon-button" aria-label="Atajos de teclado (?)" title="Atajos de teclado (?)" onClick={() => setDialog({ kind: 'shortcuts' })}><KeyRound size={17} /></button>
+            <button className="icon-button" aria-label="Ayuda" onClick={() => choose('P-06')}><CircleHelp size={18} /></button>
+            <button className="icon-button notification-trigger" aria-label="Abrir centro de notificaciones" onClick={() => setDialog({ kind: 'notifications' })}><Bell size={18} />{!notificationsRead && <i />}</button>
+            <div className="account-menu-wrapper" style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className="avatar"
+                style={{ cursor: 'pointer', border: '1px solid #d4e0f5' }}
+                aria-label="Abrir menú de cuenta de usuario"
+                aria-expanded={accountMenuOpen}
+                onClick={() => setAccountMenuOpen(!accountMenuOpen)}
+              >
+                KG
+              </button>
+              {accountMenuOpen && (
+                <div className="account-menu-popover" role="menu">
+                  <div className="account-menu-header">
+                    <strong>Kevin Andrés González</strong>
+                    <small>kevin.gonzalez@estudiantes.uniajc.edu.co</small>
+                    <span className="role-pill">{role} · Demostración</span>
+                  </div>
+                  <button className="account-menu-item" onClick={() => { setAccountMenuOpen(false); choose('P-04') }}>
+                    <User size={14} /> Mi perfil institucional (P-04)
+                  </button>
+                  <button className="account-menu-item" onClick={() => { setAccountMenuOpen(false); choose('P-36') }}>
+                    <ShieldCheck size={14} /> Privacidad y datos (P-36)
+                  </button>
+                  <button className="account-menu-item" onClick={() => { setAccountMenuOpen(false); setDialog({ kind: 'shortcuts' }) }}>
+                    <KeyRound size={14} /> Atajos de teclado (<kbd>?</kbd>)
+                  </button>
+                  <div className="account-menu-divider" />
+                  <button
+                    className="account-menu-item danger"
+                    onClick={() => {
+                      setAccountMenuOpen(false)
+                      action('Cerrar sesión')
+                    }}
+                  >
+                    <LogOut size={14} /> Cerrar sesión
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
         <div className="screen-stage">
           <div className="page-intro"><div><div className="eyebrow">{current.id} <span>•</span> {current.route}</div><h1>{screenTitle(current.id, current.name)}</h1><p>{screenSubtitle(current.id, current.name)}</p></div><button className="outline-button" onClick={() => action(`Ruta de referencia: ${current.route}`)}><ExternalLink size={15} /> Ver especificación</button></div>
           <PrototypeScreen id={current.id} role={role} tab={tab} setTab={setTab} week={week} setWeek={setWeek} action={action} />
         </div>
-        <footer className="stage-footer"><span><ShieldCheck size={14} /> Datos de ejemplo · No representa información real</span><span>Anteproyecto de grado · UNIAJC <span className="footer-sep">/</span> 2026</span></footer>
+        <footer className="stage-footer"><span><ShieldCheck size={14} /> Datos de ejemplo · No representa información real · Sin biometría ni fotografías</span><span>Anteproyecto de grado · UNIAJC <span className="footer-sep">/</span> 2026</span></footer>
         {notice && <div className="toast" role="status"><Check size={16} />{notice}<button aria-label="Cerrar aviso" onClick={() => setNotice('')}><X size={14} /></button></div>}
         {dialog && <InteractionDialog spec={dialog} notificationsRead={notificationsRead} onClose={() => setDialog(null)} onSave={(message) => { setDialog(null); setNotice(message); window.setTimeout(() => setNotice(''), 2800) }} onMarkNotificationsRead={() => { setNotificationsRead(true); setDialog(null); setNotice('Notificaciones marcadas como leídas'); window.setTimeout(() => setNotice(''), 2800) }} />}
         <CommandPalette open={commandOpen} options={commandOptions} onClose={() => setCommandOpen(false)} onChoose={chooseCommand} />
@@ -291,7 +446,7 @@ function screenSubtitle(id: string, name: string) {
   return captions[id] ?? `Gestiona ${name.toLowerCase()} de forma sencilla y segura.`
 }
 
-function PrototypeScreen({ id, role, tab, setTab, week, setWeek, action }: { id:string; role:Role; tab:string; setTab:(value:string)=>void; week:number; setWeek:(value:number)=>void; action:(message:string)=>void }) {
+function PrototypeScreen({ id, role, tab, setTab, week, setWeek, action }: { id:string; role:Role; tab:string; setTab:(value:string)=>void; week:number; setWeek:(value:number)=>void; action:(message:string, spec?: DialogSpec)=>void }) {
   if (['P-01','P-02','P-03'].includes(id)) return <AuthScreen id={id} action={action} />
   if (id === 'P-09') return <AttendanceCheck action={action} />
   if (id === 'P-33') return <CalendarScreen week={week} setWeek={setWeek} action={action} />
@@ -427,7 +582,14 @@ function TeacherLinksScreen({ action }: { action: (message: string) => void }) {
   )
 }
 
-function StudentAttendanceScreen({ action }: { action: (message: string) => void }) {
+function StudentAttendanceScreen({ action }: { action: (message: string, spec?: DialogSpec) => void }) {
+  const records = [
+    { s: 'Sesión 09', d: 'Hoy, 8 oct', h: '10:01 a. m.', v: 'Pregunta conceptual respondida en 38 s (Bucle while)', st: 'Presente', tone: 'green', code: '8A39F' },
+    { s: 'Sesión 08', d: '5 oct', h: '10:03 a. m.', v: 'Pregunta conceptual respondida en 42 s (Funciones)', st: 'Presente', tone: 'green', code: '7B12C' },
+    { s: 'Sesión 07', d: '1 oct', h: '10:17 a. m.', v: 'Ingreso 17 min tarde · Registrado en plataforma', st: 'Tarde', tone: 'amber', code: '5C88D' },
+    { s: 'Sesión 06', d: '28 sep', h: '10:02 a. m.', v: 'Validada por docente (falla técnica Teams)', st: 'Confirmada', tone: 'green', code: '4D21E' },
+    { s: 'Sesión 05', d: '24 sep', h: '9:59 a. m.', v: 'Pregunta conceptual respondida en 27 s (Variables)', st: 'Presente', tone: 'green', code: '3E90F' },
+  ]
   return (
     <>
       <div className="stat-grid compact-stats">
@@ -464,21 +626,32 @@ function StudentAttendanceScreen({ action }: { action: (message: string) => void
               </tr>
             </thead>
             <tbody>
-              {[
-                ['Sesión 09','Hoy, 8 oct','10:01 a. m.','Pregunta conceptual respondida en 38 s (Bucle while)','Presente','green'],
-                ['Sesión 08','5 oct','10:03 a. m.','Pregunta conceptual respondida en 42 s (Funciones)','Presente','green'],
-                ['Sesión 07','1 oct','10:17 a. m.','Ingreso 17 min tarde · Registrado en plataforma','Tarde','amber'],
-                ['Sesión 06','28 sep','10:02 a. m.','Validada por docente (falla técnica Teams)','Confirmada','green'],
-                ['Sesión 05','24 sep','9:59 a. m.','Pregunta conceptual respondida en 27 s (Variables)','Presente','green'],
-              ].map(([s,d,h,v,st,tone]) => (
-                <tr key={s}>
-                  <td><strong>{s}</strong></td>
-                  <td>{d}</td>
-                  <td>{h}</td>
-                  <td>{v}</td>
-                  <td><span className={`status-pill ${tone}`}>{st}</span></td>
+              {records.map((r) => (
+                <tr key={r.s}>
+                  <td><strong>{r.s}</strong></td>
+                  <td>{r.d}</td>
+                  <td>{r.h}</td>
+                  <td>{r.v}</td>
+                  <td><span className={`status-pill ${r.tone}`}>{r.st}</span></td>
                   <td>
-                    <button className="outline-button" style={{ padding: '4px 8px', fontSize: 9 }} onClick={() => action('Ver constancia digital')}>
+                    <button
+                      className="outline-button"
+                      style={{ padding: '4px 8px', fontSize: 9 }}
+                      onClick={() => action('Ver constancia digital', {
+                        kind: 'receipt',
+                        receiptData: {
+                          student: 'Kevin Andrés González Dinas',
+                          code: '2200417',
+                          course: 'Fundamentos de programación',
+                          group: 'Grupo 841A',
+                          teacher: 'Javier Pérez Campo',
+                          date: r.d === 'Hoy, 8 oct' ? 'Jueves, 8 de octubre de 2026' : `${r.d} de 2026`,
+                          entryTime: r.h,
+                          verification: r.v,
+                          hash: `UNIAJC-VERIF-2026-841A-2200417-${r.code}`
+                        }
+                      })}
+                    >
                       <FileCheck2 size={13} /> Constancia
                     </button>
                   </td>
@@ -626,15 +799,15 @@ function QuestionsScreen({role,action}:{role:Role;action:(message:string)=>void}
  return <div className="questions-layout"><section className="panel questions-panel"><div className="data-toolbar"><div><span className="section-kicker">FUNDAMENTOS DE PROGRAMACIÓN · GRUPO 841A</span><h2>{teacher?'Conversación del curso':'Dudas recientes'}</h2></div><span className="count-badge">3 sin responder</span></div><div className="filter-tabs">{['Todas','Sin responder','Resueltas'].map(item=><button className={filter===item?'active':''} key={item} onClick={()=>{setFilter(item);action(`Filtro: ${item}`)}}>{item}</button>)}</div><div className="question-list">{[['MR','Mateo Rojas','¿Cómo se recorre una matriz bidimensional?','hace 12 min','Programación · Ciclos y matrices','3'],['VC','Valentina Cruz','¿Podrían compartir un ejemplo de función recursiva?','hace 1 h','Programación · Funciones','1'],['ST','Samuel Torres','¿La entrega incluye pseudocódigo?','ayer','Taller 04 · Entregas','0']].map(([initials,name,q,time,tag,replies],i)=><article className="question-card" key={q}><div className="avatar question-avatar">{initials}</div><div className="question-content"><div className="question-author"><strong>{name}</strong><span>{time}</span></div><p>{q}</p><div className="question-foot"><span className="topic-tag">{tag}</span><span>{replies} respuestas</span></div>{teacher && i===0 && <div className="reply-box"><input aria-label="Escribe una respuesta" placeholder="Escribe una respuesta para el curso..."/><button className="primary-button" onClick={() => action('Respuesta publicada en el muro')}><ArrowRight size={15}/>Responder</button></div>}</div><span className={`status-pill ${i===2?'green':'amber'}`}>{i===2?'Resuelta':'Abierta'}</span></article>)}</div>{!teacher&&<div className="composer"><div className="avatar">KG</div><input aria-label="Escribe tu pregunta" placeholder="¿Qué te gustaría preguntar al curso?"/><button className="primary-button" onClick={() => action('Tu duda quedó publicada')}><Plus size={16}/>Publicar duda</button></div>}</section><aside className="panel questions-aside"><div className="aside-icon"><BookOpen size={19}/></div><h2>Un espacio para aprender</h2><p>Comparte tus preguntas con el curso. Tu docente recibirá un resumen para acompañarte.</p><div className="aside-stat"><span>Temas recientes</span><strong>12</strong></div><div className="topic-chip-list"><span>Funciones</span><span>Variables</span><span>Entregas</span></div></aside></div>
 }
 
-function AssignmentsScreen({role,action}:{role:Role;action:(message:string)=>void}) {
+function AssignmentsScreen({role,action}:{role:Role;action:(message:string, spec?: DialogSpec)=>void}) {
  const teacher = role === 'Docente'
  const rows = [
-   ['Taller 04 · Ciclos','Fundamentos de programación','9 oct · 11:59 p. m.','red','Prioridad alta', '18 a tiempo', '8 próximas', '6 críticas'],
-   ['Lectura: modelo relacional','Bases de datos','12 oct · 11:59 p. m.','amber','Próxima', '24 a tiempo', '5 próximas', '3 críticas'],
-   ['Quiz de lógica','Matemáticas discretas','16 oct · 8:00 a. m.','green','A tiempo', '30 a tiempo', '2 próximas', '0 críticas'],
-   ['Proyecto de curso','Ingeniería de software','22 oct · 11:59 p. m.','gray','Sin iniciar', '12 a tiempo', '10 en progreso', '10 sin iniciar']
- ]
- return <><div className="assignment-summary">{[['Vencen pronto','2','rose'],['En los próximos 7 días','3','amber'],['A tiempo','5','green']].map(([l,n,c])=><div className={`summary-tile ${c}`} key={l}><div><span>{l}</span><strong>{n}</strong></div><div className="summary-spark"/></div>)}</div><section className="panel data-panel"><div className="data-toolbar"><div className="segmented">{['Todas','Esta semana','Completadas'].map((item,i)=><button key={item} className={i===0?'selected':''} onClick={()=>action(`Mostrando: ${item}`)}>{item}</button>)}</div>{teacher&&<button className="primary-button" onClick={()=>action('Formulario para crear una tarea')}><Plus size={16}/>Nueva tarea</button>}</div><div className="assignment-list">{rows.map(([title,course,due,tone,status,g,a,r])=><article className="assignment-row" key={title}><div className={`assignment-marker ${tone}`}><FileText size={17}/></div><div className="assignment-name"><strong>{title}</strong><span>{course}</span>{teacher && <div className="aggregate-breakdown"><span className="agg-pill green">{g}</span><span className="agg-pill amber">{a}</span><span className="agg-pill rose">{r}</span></div>}</div><div className="assignment-due"><small>{teacher?'Fecha límite':'ENTREGA'}</small><strong>{due}</strong></div><div className={`traffic ${tone}`}><span/><span>{status}</span></div><button className="more-button" aria-label="Opciones de la tarea" onClick={()=>action('Opciones de la tarea')}><MoreHorizontal size={18}/></button></article>)}</div><p className="privacy-note"><ShieldCheck size={14}/> {teacher ? 'El resumen del docente muestra distribución agregada de estudiantes sin exponer identidades (HU-12).' : 'Semáforo automático basado en fecha límite para priorizar el estudio.'}</p></section></>
+   ['Taller 04 · Ciclos','Fundamentos de programación','9 oct · 11:59 p. m.','red','Prioridad alta', '18 a tiempo', '8 próximas', '6 críticas', true],
+   ['Lectura: modelo relacional','Bases de datos','12 oct · 11:59 p. m.','amber','Próxima', '24 a tiempo', '5 próximas', '3 críticas', true],
+   ['Quiz de lógica','Matemáticas discretas','16 oct · 8:00 a. m.','green','A tiempo', '30 a tiempo', '2 próximas', '0 críticas', false],
+   ['Proyecto de curso','Ingeniería de software','22 oct · 11:59 p. m.','gray','Sin iniciar', '12 a tiempo', '10 en progreso', '10 sin iniciar', false]
+ ] as const
+ return <><div className="assignment-summary">{[['Vencen pronto','2','rose'],['En los próximos 7 días','3','amber'],['A tiempo','5','green']].map(([l,n,c])=><div className={`summary-tile ${c}`} key={l}><div><span>{l}</span><strong>{n}</strong></div><div className="summary-spark"/></div>)}</div><section className="panel data-panel"><div className="data-toolbar"><div className="segmented">{['Todas','Esta semana','Completadas'].map((item,i)=><button key={item} className={i===0?'selected':''} onClick={()=>action(`Mostrando: ${item}`)}>{item}</button>)}</div>{teacher&&<button className="primary-button" onClick={()=>action('Formulario para crear una tarea')}><Plus size={16}/>Nueva tarea</button>}</div><div className="assignment-list">{rows.map(([title,course,due,tone,status,g,a,r,canUpload])=><article className="assignment-row" key={title}><div className={`assignment-marker ${tone}`}><FileText size={17}/></div><div className="assignment-name"><strong>{title}</strong><span>{course}</span>{teacher && <div className="aggregate-breakdown"><span className="agg-pill green">{g}</span><span className="agg-pill amber">{a}</span><span className="agg-pill rose">{r}</span></div>}</div><div className="assignment-due"><small>{teacher?'Fecha límite':'ENTREGA'}</small><strong>{due}</strong></div><div className={`traffic ${tone}`}><span/><span>{status}</span></div>{!teacher && canUpload && <button className="outline-button" style={{ padding: '4px 8px', fontSize: 9.5 }} onClick={() => action(`Subir entrega para ${title}`, { kind: 'upload_assignment', title: `Subir entrega: ${title}`, description: `${course} · Fecha límite: ${due}` })}><UploadCloud size={13} /> Subir</button>}<button className="more-button" aria-label="Opciones de la tarea" onClick={()=>action('Opciones de la tarea')}><MoreHorizontal size={18}/></button></article>)}</div><p className="privacy-note"><ShieldCheck size={14}/> {teacher ? 'El resumen del docente muestra distribución agregada de estudiantes sin exponer identidades (HU-12).' : 'Semáforo automático basado en fecha límite para priorizar el estudio.'}</p></section></>
 }
 
 function Dashboard({ id, action }: {id:string; action:(message:string)=>void}) {
@@ -694,18 +867,59 @@ function ClassesScreen({id,action}:{id:string;action:(message:string)=>void}) {
         {week.map((day, index) => <button key={day.date} className={`week-day-button ${activeDay === index ? 'active' : ''}`} aria-pressed={activeDay === index} aria-label={`${day.label} ${day.date} de octubre, ${day.count ? `${day.count} clases` : 'sin clases'}`} onClick={() => setActiveDay(index)}><span className="week-day-name">{day.label}</span><strong>{day.date}</strong><span className="week-day-count">{day.count ? `${day.count} ${day.count === 1 ? 'clase' : 'clases'}` : 'Libre'}</span><span className={`week-day-mark ${day.count ? 'has-classes' : ''}`} aria-hidden="true" /></button>)}
       </div>
       <div className="week-schedule-heading"><div><span className="section-kicker">{['LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO','DOMINGO'][activeDay]} {week[activeDay].date} DE OCTUBRE</span><h3>{week[activeDay].count ? `${week[activeDay].count} ${week[activeDay].count === 1 ? 'clase en tu agenda' : 'clases en tu agenda'}` : 'Un día para recargar'}</h3></div><span className="week-focus-label"><span/> {week[activeDay].count ? 'Día académico' : 'Sin clases'}</span></div>
-      {classes.length ? <div className="week-sessions">{classes.map((item) => <article className="week-session-row" key={`${item.time}-${item.title}`}><div className="week-session-time">{item.time}</div><div className={`week-session-line ${item.tone}`} aria-hidden="true"><span/></div><div className="week-session-copy"><div className="week-session-title"><strong>{item.title}</strong><span className={`status-pill ${item.tone}`}>{item.status}</span></div><span>{item.group} · Ingeniería de Sistemas</span><small><Video size={12}/>{item.platform}</small></div><button className="outline-button row-action" onClick={() => action('Abriendo enlace de la clase')}>Ver clase <ArrowRight size={14}/></button></article>)}</div> : <div className="week-empty"><CalendarDays size={19}/><span>Tu semana también necesita pausas. No hay clases programadas para este día.</span></div>}
+      {classes.length ? <div className="week-sessions">{classes.map((item) => <article className="week-session-row" key={`${item.time}-${item.title}`}><div className="week-session-time">{item.time}</div><div className={`week-session-line ${item.tone}`} aria-hidden="true"><span/></div><div className="week-session-copy"><div className="week-session-title"><strong>{item.title}</strong><span className={`status-pill ${item.tone}`}>{item.status}</span></div><span>{item.group} · Ingeniería de Sistemas</span><small><Video size={12}/>{item.platform}</small></div><div style={{ display: 'flex', gap: 6 }}><button className="outline-button row-action" title="Copiar enlace directo" onClick={() => action(`Enlace de ${item.title} copiado al portapapeles`)}><Link2 size={13} /></button><button className="outline-button row-action" onClick={() => action('Abriendo enlace de la clase')}>Ver clase <ArrowRight size={14}/></button></div></article>)}</div> : <div className="week-empty"><CalendarDays size={19}/><span>Tu semana también necesita pausas. No hay clases programadas para este día.</span></div>}
       <div className="week-explorer-footer"><span><i/> Sesión programada</span><span>Los horarios corresponden a tu zona local.</span></div>
     </section>}
-    {(!today || view === 'today') && <div className="class-list">{classes.map((item, index) => <article className="class-row-card" key={item.title}><div className={`class-date-icon ${index === 0 ? 'today' : ''}`}><span>OCT</span><strong>{view === 'week' ? week[activeDay].date : 8}</strong></div><div className="class-row-main"><div className="class-row-title"><strong>{item.title}</strong><span className={`status-pill ${item.tone}`}>{item.status}</span></div><p>{item.group} · Ingeniería de Sistemas</p><div className="class-row-meta"><span><Clock3 size={13}/>{item.time}</span><span><Video size={13}/>{item.platform}</span></div></div><button className="outline-button row-action" onClick={() => action(teacher ? 'Abriendo enlace y opciones del curso' : 'Abriendo enlace de la clase')}>{teacher ? 'Gestionar' : 'Ver clase'} <ArrowRight size={14}/></button></article>)}</div>}
+    {(!today || view === 'today') && <div className="class-list">{classes.map((item, index) => <article className="class-row-card" key={item.title}><div className={`class-date-icon ${index === 0 ? 'today' : ''}`}><span>OCT</span><strong>{view === 'week' ? week[activeDay].date : 8}</strong></div><div className="class-row-main"><div className="class-row-title"><strong>{item.title}</strong><span className={`status-pill ${item.tone}`}>{item.status}</span></div><p>{item.group} · Ingeniería de Sistemas</p><div className="class-row-meta"><span><Clock3 size={13}/>{item.time}</span><span><Video size={13}/>{item.platform}</span></div></div><div style={{ display: 'flex', gap: 6 }}><button className="outline-button row-action" title="Copiar enlace al portapapeles" onClick={() => action(`Enlace de ${item.title} copiado al portapapeles`)}><Link2 size={13} /></button><button className="outline-button row-action" onClick={() => action(teacher ? 'Abriendo enlace y opciones del curso' : 'Abriendo enlace de la clase')}>{teacher ? 'Gestionar' : 'Ingresar'} <ArrowRight size={14}/></button></div></article>)}</div>}
   </div>
 }
 
-function ProfileScreen({id,action}:{id:string;action:(message:string)=>void}) {
- return <div className="profile-grid"><section className="panel profile-panel"><div className="profile-hero"><div className="avatar profile-avatar">KG</div><div><h2>Kevin Andrés González Dinas</h2><p>Estudiante · Ingeniería de Sistemas</p></div><button className="outline-button" onClick={()=>action('Edición de perfil habilitada')}><Settings2 size={15}/>Editar perfil</button></div><div className="form-grid">{[['Nombres','Kevin Andrés'],['Apellidos','González Dinas'],['Correo institucional','kevin.gonzalez@estudiantes.uniajc.edu.co'],['Código estudiantil','2200417'],['Programa','Ingeniería de Sistemas'],['Semestre','Octavo'],['Jornada','Mañana']].map(([label,value])=><label className="form-field" key={label}>{label}<input defaultValue={value}/></label>)}</div><div className="setting-row"><div><strong>Preferencias de notificación</strong><p>Recibe novedades de tus clases y cursos.</p></div><button className="outline-button" onClick={()=>action('Preferencias de notificación actualizadas')}><Settings2 size={15}/>Configurar</button></div><div className="setting-row"><div><strong>Sesiones abiertas</strong><p>Este dispositivo · Último acceso hoy, 8:42 a. m.</p></div><button className="text-button" onClick={()=>action('Se cerraron otras sesiones')}>Cerrar otras sesiones</button></div><button className="primary-button" onClick={()=>action('Cambios guardados correctamente')}><Check size={16}/>Guardar cambios</button></section><aside className="panel account-aside"><div className="aside-icon"><LockKeyhole size={18}/></div><span className="section-kicker">CUENTA SEGURA</span><h2>Tu información está protegida</h2><p>Usamos tus datos solo para apoyar la gestión de tus clases virtuales.</p><button className="text-button" onClick={()=>action('Abriendo política de privacidad')}>Leer política de privacidad <ArrowRight size={14}/></button></aside></div>
+function ProfileScreen({id,action}:{id:string;action:(message:string, spec?: DialogSpec)=>void}) {
+ return <div className="profile-grid"><section className="panel profile-panel"><div className="profile-hero"><div className="avatar profile-avatar">KG</div><div><h2>Kevin Andrés González Dinas</h2><p>Estudiante · Ingeniería de Sistemas</p></div><button className="outline-button" onClick={()=>action('Edición de perfil')}><Settings2 size={15}/>Editar perfil</button></div><div className="form-grid">{[['Nombres','Kevin Andrés'],['Apellidos','González Dinas'],['Correo institucional','kevin.gonzalez@estudiantes.uniajc.edu.co'],['Código estudiantil','2200417'],['Programa','Ingeniería de Sistemas'],['Semestre','Octavo'],['Jornada','Mañana']].map(([label,value])=><label className="form-field" key={label}>{label}<input defaultValue={value}/></label>)}</div><div className="setting-row"><div><strong>Preferencias de notificación</strong><p>Recibe novedades de tus clases y cursos en tus canales preferidos.</p></div><button className="outline-button" onClick={()=>action('Preferencias de notificación')}><Settings2 size={15}/>Configurar</button></div><div className="setting-row"><div><strong>Sesiones abiertas</strong><p>Este dispositivo · Último acceso hoy, 8:42 a. m.</p></div><button className="text-button" onClick={()=>action('Cerrar otras sesiones', { kind: 'confirm_destructive', title: '¿Cerrar todas las demás sesiones activas?', description: 'Se revocarán todos los tokens y sesiones abiertas en otros navegadores.', warning: 'Solo se conservará el acceso actual en este equipo.', destructiveConfirmText: 'Cerrar otras sesiones' })}>Cerrar otras sesiones</button></div><button className="primary-button" onClick={()=>action('Cambios guardados correctamente')}><Check size={16}/>Guardar cambios</button></section><aside className="panel account-aside"><div className="aside-icon"><LockKeyhole size={18}/></div><span className="section-kicker">CUENTA SEGURA</span><h2>Tu información está protegida</h2><p>Usamos tus datos solo para apoyar la gestión de tus clases virtuales conforme a la Ley 1581 de 2012.</p><button className="text-button" onClick={()=>action('Abriendo política de privacidad')}>Leer política de privacidad <ArrowRight size={14}/></button></aside></div>
 }
 
-function PrivacyScreen({ action }: { action: (message: string) => void }) {
+function PrivacyScreen({ action }: { action: (message: string, spec?: DialogSpec) => void }) {
+  const downloadDataJson = () => {
+    const data = {
+      plataforma: 'aula+ UNIAJC Sede Norte',
+      marco_normativo: 'Ley 1581 de 2012 y Decreto 1377 de 2013 (Habeas Data)',
+      titular: {
+        nombres: 'Kevin Andrés',
+        apellidos: 'González Dinas',
+        codigo_estudiantil: '2200417',
+        correo_institucional: 'kevin.gonzalez@estudiantes.uniajc.edu.co',
+        programa: 'Ingeniería de Sistemas',
+        semestre: 'Octavo (2026-2)',
+        sede: 'Sede Norte (Cali, Colombia)'
+      },
+      politica_privacidad: {
+        biometria_almacenada: false,
+        reconocimiento_facial: false,
+        fotografias_almacenadas: false,
+        descripcion: 'La plataforma aula+ no recopila, procesa ni almacena datos biométricos, rasgos faciales ni fotografías personales.'
+      },
+      resumen_asistencia: {
+        porcentaje_acumulado: '94.4%',
+        sesiones_registradas: 18,
+        asistidas: 17,
+        constancias_digitales_emitidas: 17
+      },
+      cursos_inscritos: [
+        { codigo: 'SIS-101', nombre: 'Fundamentos de programación', grupo: '841A', docente: 'Javier Pérez Campo' },
+        { codigo: 'MAT-101', nombre: 'Matemáticas discretas', grupo: '841A', docente: 'Carlos Ríos' },
+        { codigo: 'SIS-301', nombre: 'Bases de datos', grupo: '831B', docente: 'Mónica Salazar' }
+      ]
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'aula_plus_mis_datos_2200417.json'
+    a.click()
+    URL.revokeObjectURL(url)
+    action('Archivo de datos personales (JSON) generado y descargado correctamente')
+  }
+
   return (
     <div className="profile-grid">
       <section className="panel profile-panel">
@@ -713,47 +927,60 @@ function PrivacyScreen({ action }: { action: (message: string) => void }) {
           <div className="aside-icon"><ShieldCheck size={20} /></div>
           <div>
             <h2>Tu información, bajo tu control</h2>
-            <p>Revisa el uso de los datos de tu cuenta de demostración.</p>
+            <p>Garantía de Habeas Data conforme a la Ley 1581 de 2012 y Decreto 1377 de 2013.</p>
           </div>
         </div>
         <div className="privacy-callout">
           <LockKeyhole size={19} />
           <div>
-            <strong>Este prototipo no guarda información personal</strong>
-            <p>Los nombres, códigos y registros que ves son datos de ejemplo para mostrar la experiencia.</p>
+            <strong>Minimización estricta de datos · Sin biometría ni fotografías</strong>
+            <p>La plataforma aula+ verifica tu presencia mediante preguntas conceptuales en vivo. No solicita, no procesa y no almacena fotos ni reconocimiento facial.</p>
           </div>
         </div>
         <div className="setting-row">
           <div>
-            <strong>Datos de cuenta</strong>
-            <p>Nombre, correo institucional, código estudiantil y programa académico.</p>
+            <strong>Datos de identificación institucional</strong>
+            <p>Nombre, correo institucional (@estudiantes.uniajc.edu.co), código y programa académico.</p>
           </div>
-          <span className="status-pill blue">Demostración</span>
+          <span className="status-pill blue">Institucional</span>
         </div>
         <div className="setting-row">
           <div>
-            <strong>Actividad académica</strong>
-            <p>Clases, asistencia y entregas de ejemplo, visibles en las vistas del prototipo.</p>
+            <strong>Actividad académica y asistencia</strong>
+            <p>Registros de conexión, hora de respuesta conceptual y constancias criptográficas con SHA-256.</p>
           </div>
-          <span className="status-pill blue">Demostración</span>
+          <span className="status-pill green">Auditado</span>
         </div>
         <div className="setting-row">
           <div>
-            <strong>Finalidad</strong>
-            <p>Ilustrar la organización de clases virtuales y sus flujos académicos.</p>
+            <strong>Finalidad exclusiva</strong>
+            <p>Acompañamiento pedagógico y gestión de clases virtuales en UNIAJC Sede Norte.</p>
           </div>
         </div>
-        <button className="primary-button" onClick={() => action('Solicitar acceso a mis datos')}>
-          <FileText size={15} /> Solicitar acceso a mis datos
-        </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
+          <button className="primary-button" onClick={() => action('Solicitar acceso a mis datos')}>
+            <FileText size={15} /> Radicar solicitud ARCO
+          </button>
+          <button className="outline-button" onClick={downloadDataJson}>
+            <Download size={15} /> Descargar mis datos (JSON)
+          </button>
+          <button
+            className="outline-button"
+            style={{ color: '#c2392d', borderColor: '#f9ccc8' }}
+            onClick={() => action('Solicitud de supresión de datos')}
+          >
+            <Trash2 size={15} /> Solicitar supresión
+          </button>
+        </div>
       </section>
       <aside className="panel account-aside">
         <div className="aside-icon"><ShieldCheck size={18} /></div>
-        <span className="section-kicker">TUS DERECHOS</span>
-        <h2>Consulta o actualiza tus datos</h2>
-        <p>Puedes iniciar una solicitud para conocer qué información está asociada a tu cuenta o pedir su actualización.</p>
-        <button className="text-button" onClick={() => action('Solicitar acceso a mis datos')}>
-          Iniciar una solicitud <ArrowRight size={14} />
+        <span className="section-kicker">TUS DERECHOS ARCO</span>
+        <h2>Acceso, Rectificación, Cancelación y Oposición</h2>
+        <p>Todo titular tiene derecho a conocer, actualizar y rectificar sus datos personales frente a los responsables del tratamiento (Art. 8, Ley 1581 de 2012).</p>
+        <div className="aside-stat"><span>Plazo legal perentorio</span><strong>15 días hábiles</strong></div>
+        <button className="text-button" style={{ marginTop: 12 }} onClick={() => action('Solicitar acceso a mis datos')}>
+          Iniciar trámite formal <ArrowRight size={14} />
         </button>
       </aside>
     </div>
@@ -1212,7 +1439,7 @@ function EnrollmentManagementScreen({ action }: { action: (message: string) => v
   )
 }
 
-function AuditLogScreen({ action }: { action: (message: string) => void }) {
+function AuditLogScreen({ action }: { action: (message: string, spec?: DialogSpec) => void }) {
   const [filterType, setFilterType] = useState('Todos')
   const logs = [
     { hash: '7f3a9e14c0b29845d16a8c3d91f24e0b5832a1e948c27183fa4192b0e6d8a351', time: 'Hoy, 9:42:15 a. m.', user: 'Javier Pérez Campo', role: 'Docente', action: 'CAMBIO_EMERGENCIA_ENLACE (RB-05)', entity: 'Sesión 09 · Grupo 841A', ip: '181.61.204.12', cat: 'Enlaces' },
@@ -1282,7 +1509,39 @@ function AuditLogScreen({ action }: { action: (message: string) => void }) {
                   <td>{l.entity}</td>
                   <td><code>{l.ip}</code></td>
                   <td>
-                    <button className="outline-button" style={{ padding: '4px 8px', fontSize: 9 }} onClick={() => action('Inspeccionar carga útil de auditoría')}>
+                    <button
+                      className="outline-button"
+                      style={{ padding: '4px 8px', fontSize: 9 }}
+                      onClick={() => action(`Inspeccionar bloque ${l.hash.slice(0, 8)}`, {
+                        kind: 'drawer',
+                        drawerData: {
+                          title: `Bloque SHA-256 · ${l.action}`,
+                          subtitle: `${l.entity} · Registrado el ${l.time}`,
+                          kicker: 'CADENA CRIPTOGRÁFICA INMUTABLE (SHA-256)',
+                          sections: [
+                            { label: 'Hash criptográfico (SHA-256)', value: l.hash, isCode: true },
+                            { label: 'Fecha y hora (Sello NTP)', value: l.time },
+                            { label: 'Actor responsable y rol', value: `${l.user} (${l.role})` },
+                            { label: 'Acción institucional auditada', value: l.action, isBadge: true, badgeTone: l.action.includes('RB-05') ? 'rose' : l.action.includes('RB-10') ? 'green' : 'blue' },
+                            { label: 'Entidad afectada', value: l.entity },
+                            { label: 'Dirección IP de origen', value: l.ip, isCode: true },
+                            { label: 'Integridad y no repudio (RB-14)', value: 'Verificado con firma digital DTIC', isBadge: true, badgeTone: 'green' }
+                          ],
+                          jsonPayload: JSON.stringify({
+                            version: '2.0',
+                            evento: l.action,
+                            categoria: l.cat,
+                            actor: l.user,
+                            rol: l.role,
+                            entidad: l.entity,
+                            timestamp: l.time,
+                            ip: l.ip,
+                            hash_sha256: l.hash,
+                            integridad_criptografica: 'VALIDA_NTP_SINCRONIZADO'
+                          }, null, 2)
+                        }
+                      })}
+                    >
                       Inspeccionar
                     </button>
                   </td>
@@ -1562,8 +1821,398 @@ function AdminScreen({id,tab,setTab,action}:{id:string;tab:string;setTab:(v:stri
 }
 
 function CalendarScreen({week,setWeek,action}:{week:number;setWeek:(n:number)=>void;action:(m:string)=>void}) { const days=['Lun 5','Mar 6','Mié 7','Jue 8','Vie 9']; return <section className="panel calendar-panel"><div className="calendar-toolbar"><div className="segmented"><button className="selected">Semana</button><button onClick={()=>action('Vista mensual seleccionada')}>Mes</button></div><div className="calendar-center"><button className="icon-button" aria-label="Semana anterior" onClick={()=>setWeek(week-1)}><ChevronLeft size={17}/></button><strong>{week===0?'5 – 9 de octubre de 2026':week<0?'28 sep – 2 oct de 2026':'12 – 16 de octubre de 2026'}</strong><button className="icon-button" aria-label="Semana siguiente" onClick={()=>setWeek(week+1)}><ChevronRight size={17}/></button></div><button className="outline-button" onClick={()=>setWeek(0)}>Hoy</button></div><div className="calendar-grid"><div className="calendar-time-spacer"/>{days.map((d,i)=><div className={i===3?'day-heading current':'day-heading'} key={d}>{d.split(' ')[0]}<strong>{Number(d.split(' ')[1])+week*7}</strong></div>)}{['8 a. m.','9 a. m.','10 a. m.','11 a. m.','12 p. m.','1 p. m.','2 p. m.','3 p. m.'].map((time,row)=><div className="calendar-row" key={time}><span className="calendar-time">{time}</span>{days.map((day,col)=><div className="calendar-cell" key={day+time}>{(row===2&&col===0||row===4&&col===2||row===6&&col===3)&&<button className={`calendar-event event-${(col+row)%3}`} onClick={()=>action('Abriendo detalle de la clase')}>{row===2?'Fundamentos de programación':row===4?'Matemáticas discretas':'Bases de datos'}<small>{row===2?'10:00 · Teams':row===4?'12:00 · Meet':'2:00 · Zoom'}</small></button>}</div>)}</div>)}</div></section> }
-function AttendanceCheck({action}:{action:(m:string)=>void}) { const [step,setStep]=useState(1); return <div className="check-layout"><section className="panel check-card"><div className="check-course"><div className="subject-icon"><BookOpen size={20}/></div><div><strong>Fundamentos de programación</strong><span>Grupo 841A · Javier Pérez</span></div><span className="time-pill"><span/> ABIERTA</span></div><div className="progress-steps">{['Ingreso','Verificación','Confirmación'].map((x,i)=><div className={i+1<=step?'step done':'step'} key={x}><span>{i+1<step?<Check size={13}/>:i+1}</span><small>{x}</small></div>)}</div>{step===1?<div className="check-body"><div className="check-illustration"><ClipboardCheck size={32}/></div><span className="section-kicker">PASO 1 DE 3</span><h2>Registra tu ingreso</h2><p>Confirma que estás en la clase. No necesitas salir de la videollamada.</p><div className="check-info"><Clock3 size={15}/>La verificación estará disponible por 3 minutos.</div><button className="primary-button wide-button" onClick={()=>setStep(2)}>Registrar ingreso <ArrowRight size={16}/></button></div>:step===2?<div className="check-body"><div className="check-illustration"><Sparkles size={30}/></div><span className="section-kicker">PASO 2 DE 3</span><h2>Una pregunta rápida</h2><p>¿Qué estructura permite repetir instrucciones mientras se cumple una condición?</p><div className="choice-list">{['Bucle while','Condicional if','Variable entera'].map((option,i)=><button key={option} onClick={(e)=>{e.currentTarget.classList.add('chosen');setTimeout(()=>setStep(3),350)}}><span className="radio"/>{option}</button>)}</div><div className="check-info"><ShieldCheck size={15}/>Verificación rápida sin captura de datos biométricos.</div></div>:<div className="check-body success-body"><div className="success-check"><Check size={28}/></div><span className="section-kicker">PASO 3 DE 3</span><h2>¡Asistencia registrada!</h2><p>Tu presencia quedó confirmada para esta sesión.</p><div className="attendance-status"><span>Estado de asistencia</span><strong><span/> Presente</strong></div><button className="primary-button wide-button" onClick={()=>action('Puedes volver a la clase')}>Volver a mi clase <ExternalLink size={15}/></button></div>}</section><aside className="panel check-aside"><div className="aside-icon"><ShieldCheck size={18}/></div><h2>Privacidad primero</h2><p>Esta verificación solo confirma tu participación. No se graban imágenes ni se usa reconocimiento facial.</p><button className="text-button" onClick={()=>action('Abriendo información de privacidad')}>Conoce cómo protegemos tus datos <ArrowRight size={14}/></button></aside></div> }
+function AttendanceCheck({ action }: { action: (m: string, spec?: DialogSpec) => void }) {
+  const [step, setStep] = useState(1)
+  const [secondsLeft, setSecondsLeft] = useState(168)
+  const [attempt] = useState(1)
 
-function AuthScreen({id,action}:{id:string;action:(m:string)=>void}) { const login=id==='P-01', reset=id==='P-03'; return <div className="auth-layout"><section className="auth-card"><div className="auth-logo"><div className="brand-mark"><Video size={19}/></div><strong>aula<span>+</span></strong></div><span className="section-kicker">{login?'BIENVENIDO A TU CAMPUS VIRTUAL':reset?'SEGURIDAD DE TU CUENTA':'RECUPERACIÓN DE CUENTA'}</span><h2>{login?'Inicia sesión':reset?'Crea una nueva contraseña':'Recupera tu contraseña'}</h2><p>{login?'Ingresa con tu correo institucional para continuar.':reset?'Elige una contraseña segura para proteger tu cuenta.':'Te enviaremos un enlace de recuperación a tu correo institucional.'}</p><div className="auth-fields">{!login&&reset&&<label className="form-field">Nueva contraseña<input type="password" placeholder="Mínimo 10 caracteres"/></label>}<label className="form-field">Correo institucional<input type="email" placeholder="nombre@uniajc.edu.co" defaultValue={login?'kevin.gonzalez@estudiantes.uniajc.edu.co':''}/></label>{login&&!reset&&<label className="form-field">Contraseña<input type="password" placeholder="Ingresa tu contraseña" defaultValue="uniajc2026"/></label>}{reset&&<label className="form-field">Confirmar contraseña<input type="password" placeholder="Repite tu contraseña"/></label>}</div><button className="primary-button wide-button" onClick={()=>action(login?'Inicio de sesión de demostración':reset?'Contraseña actualizada':'Enlace de recuperación enviado')}>{login?'Iniciar sesión':reset?'Guardar contraseña':'Enviar enlace'} <ArrowRight size={16}/></button>{login&&<button className="auth-link" onClick={()=>action('Vista de recuperación disponible en P-02')}>¿Olvidaste tu contraseña?</button>}<div className="auth-secure"><LockKeyhole size={14}/>Acceso seguro con correo institucional</div></section><aside className="auth-side"><div className="auth-decoration"><span className="decoration-circle circle-one"/><span className="decoration-circle circle-two"/><div className="floating-card"><div className="subject-icon"><CalendarDays size={20}/></div><div><strong>Tu jornada, organizada</strong><small>Clases · Enlaces · Asistencia</small></div><Check size={16}/></div></div><span className="section-kicker">UNIAJC · SEDE NORTE</span><h2>Todo lo que rodea tu clase virtual, en un solo lugar.</h2><p>Conecta con tus cursos, encuentra tus enlaces y mantente al día.</p></aside></div> }
+  useEffect(() => {
+    if (step === 3) return
+    const timer = setInterval(() => {
+      setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [step])
 
-function UtilityScreen({id,action}:{id:string;action:(m:string)=>void}) { const install=id==='P-35', open=id==='P-34', help=id==='P-06'; return <div className="utility-layout"><section className="panel utility-main"><div className="utility-art"><div className="utility-art-icon">{install?<Download size={26}/>:open?<ExternalLink size={26}/>:<CircleHelp size={26}/>}</div></div><span className="section-kicker">{install?'ACCESO RÁPIDO':open?'CLASE VIRTUAL':'CENTRO DE AYUDA'}</span><h2>{install?'Instala aula+ en tu celular':open?'Abre tu clase en el navegador': 'Estamos aquí para ayudarte'}</h2><p>{install?'Agrega la plataforma a la pantalla de inicio para consultar tus clases más rápido, incluso desde el celular.':open?'Si tienes inconvenientes con la aplicación, puedes continuar tu clase desde el navegador de tu dispositivo.':'Encuentra respuestas sobre tus cursos, asistencia, enlaces y privacidad.'}</p><button className="primary-button" onClick={()=>action(install?'Sigue los pasos de instalación de tu dispositivo':open?'Abriendo el navegador del sistema':'Centro de ayuda abierto')}>{install?'Ver instrucciones':open?'Continuar en el navegador':'Explorar preguntas frecuentes'} <ArrowRight size={15}/></button></section><aside className="panel utility-steps"><span className="section-kicker">{install?'EN TRES PASOS':'RECURSOS ÚTILES'}</span>{(install?['Abre esta página en Safari.','Toca el botón Compartir.','Selecciona “Agregar a inicio”.']:['¿Cómo cambio mi enlace de clase?','¿Cómo registro mi asistencia?','¿Cómo solicito una corrección?']).map((item,i)=><div className="utility-step" key={item}><span>{i+1}</span><div><strong>{item}</strong><small>{install?'Tu cuenta se mantendrá protegida.':'Consulta la guía rápida de uso.'}</small></div><ChevronRight size={16}/></div>)}<div className="help-contact"><CircleHelp size={16}/><span>¿Necesitas más ayuda?</span><button onClick={()=>action('Contacto con soporte académico')}>Contactar soporte</button></div></aside></div> }
+  const formatTimer = (secs: number) => {
+    const m = Math.floor(secs / 60)
+    const s = secs % 60
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
+
+  return (
+    <div className="check-layout">
+      <section className="panel check-card">
+        <div className="check-course">
+          <div className="subject-icon"><BookOpen size={20} /></div>
+          <div>
+            <strong>Fundamentos de programación</strong>
+            <span>Grupo 841A · Javier Pérez Campo</span>
+          </div>
+          <span className="time-pill"><span /> ABIERTA</span>
+        </div>
+        <div className="progress-steps">
+          {['Ingreso', 'Verificación', 'Confirmación'].map((x, i) => (
+            <div className={i + 1 <= step ? 'step done' : 'step'} key={x}>
+              <span>{i + 1 < step ? <Check size={13} /> : i + 1}</span>
+              <small>{x}</small>
+            </div>
+          ))}
+        </div>
+        {step === 1 ? (
+          <div className="check-body">
+            <div className="check-illustration"><ClipboardCheck size={32} /></div>
+            <span className="section-kicker">PASO 1 DE 3 · REGLA RB-08</span>
+            <h2>Registra tu ingreso a la clase</h2>
+            <p>Confirma que estás conectado a la sesión de hoy. No necesitas encender la cámara ni salir de la videollamada.</p>
+            <div className="check-info" style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
+              <div className={`timer-pill ${secondsLeft < 60 ? 'urgent' : ''}`}>
+                <Clock3 size={13} /> {formatTimer(secondsLeft)} min restantes
+              </div>
+              <span style={{ fontSize: 9, color: '#7a889e', alignSelf: 'center' }}>Intento {attempt} de 2</span>
+            </div>
+            <button className="primary-button wide-button" onClick={() => setStep(2)}>
+              Registrar ingreso <ArrowRight size={16} />
+            </button>
+          </div>
+        ) : step === 2 ? (
+          <div className="check-body">
+            <div className="check-illustration"><Sparkles size={30} /></div>
+            <span className="section-kicker">PASO 2 DE 3 · PREGUNTA CONCEPTUAL (RB-08)</span>
+            <h2>Pregunta rápida sobre la clase</h2>
+            <p style={{ fontWeight: 600, color: '#273852', margin: '8px 0 14px' }}>
+              ¿Qué estructura permite repetir instrucciones mientras una condición booleana se mantenga verdadera?
+            </p>
+            <div className="choice-list">
+              {['Bucle while (condición)', 'Condicional if (condición)', 'Declaración de variable entera'].map((option, i) => (
+                <button
+                  key={option}
+                  onClick={(e) => {
+                    e.currentTarget.classList.add('chosen')
+                    setTimeout(() => setStep(3), 360)
+                  }}
+                >
+                  <span className="radio" />
+                  <span>{option}</span>
+                  {i === 0 && <span style={{ marginLeft: 'auto', fontSize: 8.5, color: '#8895a7' }}>38 s promedio</span>}
+                </button>
+              ))}
+            </div>
+            <div className="check-info">
+              <ShieldCheck size={15} />
+              <span>Verificación interactiva de presencia sin captura de datos biométricos ni fotografías (Ley 1581).</span>
+            </div>
+          </div>
+        ) : (
+          <div className="check-body success-body">
+            <div className="success-check"><Check size={28} /></div>
+            <span className="section-kicker">PASO 3 DE 3 · VALIDACIÓN EXITOSA</span>
+            <h2>¡Asistencia confirmada!</h2>
+            <p>Tu presencia quedó registrada en el log inmutable con sello de tiempo institucional.</p>
+            <div className="attendance-status">
+              <div>
+                <span style={{ display: 'block', fontSize: 8.5, color: '#738399' }}>Estado oficial</span>
+                <strong><span /> Presente a tiempo</strong>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <small style={{ fontSize: 8, color: '#8b97a8', display: 'block' }}>Tiempo empleado</small>
+                <strong style={{ color: '#2b5ea9', fontSize: 9.5 }}>38 segundos (Intento 1 de 2)</strong>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button
+                className="outline-button"
+                style={{ flex: 1 }}
+                onClick={() => action('Ver constancia digital', {
+                  kind: 'receipt',
+                  receiptData: {
+                    student: 'Kevin Andrés González Dinas',
+                    code: '2200417',
+                    course: 'Fundamentos de programación',
+                    group: 'Grupo 841A',
+                    teacher: 'Javier Pérez Campo',
+                    date: 'Jueves, 8 de octubre de 2026',
+                    entryTime: '10:01:28 a. m.',
+                    verification: 'Pregunta conceptual respondida en 38 s (Bucle while) · Intento 1 de 2',
+                    hash: 'UNIAJC-VERIF-2026-841A-2200417-8A39F'
+                  }
+                })}
+              >
+                <FileCheck2 size={14} /> Constancia (RB-12)
+              </button>
+              <button
+                className="primary-button"
+                style={{ flex: 1 }}
+                onClick={() => action('Volver a la clase virtual')}
+              >
+                Volver a la clase <ExternalLink size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+      <aside className="panel check-aside">
+        <div className="aside-icon"><ShieldCheck size={18} /></div>
+        <span className="section-kicker">HABEAS DATA · UNIAJC</span>
+        <h2>Privacidad institucional</h2>
+        <p>Esta verificación solo evalúa tu respuesta en vivo. La plataforma nunca graba imágenes de tu cámara web ni aplica algoritmos de reconocimiento facial.</p>
+        <button className="text-button" onClick={() => action('Abriendo información de privacidad')}>
+          Ver política de tratamiento de datos <ArrowRight size={14} />
+        </button>
+      </aside>
+    </div>
+  )
+}
+
+function AuthScreen({ id, action }: { id: string; action: (m: string) => void }) {
+  const login = id === 'P-01'
+  const reset = id === 'P-03'
+  const [showPassword, setShowPassword] = useState(false)
+  const [emailCooldown, setEmailCooldown] = useState(false)
+
+  const handleSendRecovery = () => {
+    setEmailCooldown(true)
+    action('Enlace de recuperación enviado a tu correo institucional')
+    setTimeout(() => setEmailCooldown(false), 30000)
+  }
+
+  return (
+    <div className="auth-layout">
+      <section className="auth-card">
+        <div className="auth-logo">
+          <div className="brand-mark"><Video size={19} /></div>
+          <strong>aula<span>+</span></strong>
+        </div>
+        <span className="section-kicker">{login ? 'BIENVENIDO A TU CAMPUS VIRTUAL' : reset ? 'SEGURIDAD DE TU CUENTA' : 'RECUPERACIÓN INSTITUCIONAL'}</span>
+        <h2>{login ? 'Inicia sesión' : reset ? 'Crea tu nueva contraseña' : 'Recupera el acceso a tu cuenta'}</h2>
+        <p>
+          {login
+            ? 'Ingresa con tu correo institucional UNIAJC para continuar a tus clases virtuales.'
+            : reset
+            ? 'Establece una nueva clave para proteger tu acceso a la plataforma.'
+            : 'Te enviaremos un enlace seguro y temporal a tu bandeja institucional de correo.'}
+        </p>
+
+        <div className="auth-fields">
+          <label className="form-field">
+            Correo institucional
+            <input
+              type="email"
+              placeholder="nombre@estudiantes.uniajc.edu.co"
+              defaultValue={login ? 'kevin.gonzalez@estudiantes.uniajc.edu.co' : ''}
+            />
+          </label>
+
+          {login && (
+            <label className="form-field">
+              Contraseña
+              <div className="password-input-wrapper">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Ingresa tu contraseña"
+                  defaultValue="uniajc2026"
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </label>
+          )}
+
+          {reset && (
+            <>
+              <label className="form-field">
+                Nueva contraseña
+                <div className="password-input-wrapper">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Mínimo 10 caracteres"
+                    defaultValue="Uniajc2026*"
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </label>
+              <label className="form-field">
+                Confirmar contraseña
+                <input type="password" placeholder="Repite tu nueva contraseña" defaultValue="Uniajc2026*" />
+              </label>
+              <div style={{ background: '#f8fafc', border: '1px solid #edf1f6', borderRadius: 7, padding: '8px 10px', fontSize: 8.5, color: '#68778f' }}>
+                <span style={{ fontWeight: 650, display: 'block', color: '#273852', marginBottom: 2 }}>Criterios de seguridad:</span>
+                <div>✓ Mínimo 10 caracteres alfanuméricos</div>
+                <div>✓ Al menos una mayúscula y un número</div>
+                <div>✓ Sin inclusión de tu código ni datos obvios</div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {login && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '4px 0 14px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 9.5, color: '#526279', cursor: 'pointer' }}>
+              <input type="checkbox" defaultChecked /> Recordar sesión
+            </label>
+            <button className="auth-link" style={{ margin: 0 }} onClick={() => action('Vista de recuperación disponible en P-02')}>
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
+        )}
+
+        <button
+          className="primary-button wide-button"
+          onClick={() => {
+            if (id === 'P-02') handleSendRecovery()
+            else action(login ? 'Inicio de sesión de demostración exitoso' : 'Contraseña restablecida correctamente')
+          }}
+          disabled={id === 'P-02' && emailCooldown}
+        >
+          {login ? 'Iniciar sesión' : reset ? 'Guardar nueva contraseña' : emailCooldown ? 'Enlace enviado (espera 30 s)' : 'Enviar enlace de recuperación'} <ArrowRight size={16} />
+        </button>
+
+        <div className="auth-secure">
+          <LockKeyhole size={14} /> Acceso protegido por autenticación institucional UNIAJC
+        </div>
+      </section>
+
+      <aside className="auth-side">
+        <div className="auth-decoration">
+          <span className="decoration-circle circle-one" />
+          <span className="decoration-circle circle-two" />
+          <div className="floating-card">
+            <div className="subject-icon"><CalendarDays size={20} /></div>
+            <div>
+              <strong>Tu jornada, organizada</strong>
+              <small>Clases · Enlaces · Asistencia</small>
+            </div>
+            <Check size={16} />
+          </div>
+        </div>
+        <span className="section-kicker">UNIAJC · SEDE NORTE</span>
+        <h2>Todo lo que rodea tu clase virtual, en un solo lugar.</h2>
+        <p>Conecta con tus cursos, encuentra tus enlaces vigentes y verifica tu presencia sin complicaciones.</p>
+      </aside>
+    </div>
+  )
+}
+
+function UtilityScreen({ id, action }: { id: string; action: (m: string) => void }) {
+  const install = id === 'P-35'
+  const open = id === 'P-34'
+  const help = id === 'P-06'
+  const [openFaq, setOpenFaq] = useState<number | null>(0)
+
+  const faqs = [
+    {
+      q: '¿Cómo cambio el enlace de clase si Teams o Meet falla?',
+      a: 'Si eres docente y faltan menos de 30 minutos para la clase, la plataforma activa la regla RB-04 de bloqueo para evitar confusiones. Si surge un imprevisto técnico, utiliza el botón "Cambio de emergencia (RB-05)" indicando el motivo. Todos los estudiantes recibirán la notificación instantánea y se creará un registro inmutable en auditoría.'
+    },
+    {
+      q: '¿Por qué la verificación de presencia no pide fotografías ni biometría?',
+      a: 'Conforme a la Ley 1581 de 2012 y el principio de minimización de datos, aula+ no captura fotografías ni procesa reconocimiento facial. La asistencia se valida respondiendo una pregunta conceptual de opción múltiple aleatoria en un lapso de 3 minutos.'
+    },
+    {
+      q: '¿Cómo descargo mi constancia digital de asistencia?',
+      a: 'En la pantalla "Mi asistencia (P-10)", cada sesión tiene un botón "Constancia" que genera un comprobante con identificador criptográfico único (RB-12) válido ante la secretaría académica.'
+    },
+    {
+      q: '¿Qué plazo tiene la institución para atender peticiones de Habeas Data?',
+      a: 'Conforme al Artículo 15 de la Ley 1581 de 2012, cualquier solicitud de consulta, rectificación o supresión de datos personales debe ser resuelta en un término legal máximo de 15 días hábiles.'
+    }
+  ]
+
+  return (
+    <div className="utility-layout">
+      <section className="panel utility-main">
+        <div className="utility-art">
+          <div className="utility-art-icon">
+            {install ? <Download size={26} /> : open ? <ExternalLink size={26} /> : <CircleHelp size={26} />}
+          </div>
+        </div>
+        <span className="section-kicker">
+          {install ? 'ACCESO MÓVIL · PWA' : open ? 'COMPATIBILIDAD WEB' : 'CENTRO DE AYUDA Y PRIVACIDAD'}
+        </span>
+        <h2>
+          {install ? 'Instala aula+ en tu celular' : open ? 'Abre tu clase en el navegador' : '¿En qué podemos orientarte hoy?'}
+        </h2>
+        <p>
+          {install
+            ? 'Agrega la plataforma a la pantalla de inicio de tu smartphone o tablet para consultar horarios y enlaces en segundos sin instalar aplicaciones pesadas.'
+            : open
+            ? 'Si experimentas problemas con la aplicación de escritorio de Teams o Zoom, puedes abrir la sesión virtual directamente desde cualquier navegador compatible.'
+            : 'Preguntas frecuentes sobre enlaces de videoconferencia, verificación interactiva de asistencia y tus derechos de protección de datos personales.'}
+        </p>
+
+        {help ? (
+          <div style={{ marginTop: 18 }}>
+            <span className="section-kicker" style={{ display: 'block', marginBottom: 10 }}>PREGUNTAS FRECUENTES RESUELTAS</span>
+            {faqs.map((f, idx) => (
+              <div className="accordion-box" key={f.q}>
+                <button
+                  type="button"
+                  className="accordion-header"
+                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                  aria-expanded={openFaq === idx}
+                >
+                  <span>{f.q}</span>
+                  <ChevronDown
+                    size={15}
+                    style={{
+                      transform: openFaq === idx ? 'rotate(180deg)' : 'none',
+                      transition: 'transform .18s',
+                      flex: 'none'
+                    }}
+                  />
+                </button>
+                {openFaq === idx && (
+                  <div className="accordion-content">
+                    {f.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <button
+            className="primary-button"
+            onClick={() => action(install ? 'Sigue los pasos de instalación en tu dispositivo' : 'Abriendo sala en el navegador del sistema')}
+          >
+            {install ? 'Ver guía de instalación' : 'Continuar en el navegador'} <ArrowRight size={15} />
+          </button>
+        )}
+      </section>
+
+      <aside className="panel utility-steps">
+        <span className="section-kicker">{install ? 'EN TRES PASOS' : 'CANALES OFICIALES'}</span>
+        {(install
+          ? ['Abre esta página en Safari o Chrome.', 'Toca el botón Compartir o Menú.', 'Selecciona “Agregar a pantalla de inicio”.']
+          : ['Secretaría Académica UNIAJC', 'Mesa de Ayuda DTIC', 'Oficina de Protección de Datos']
+        ).map((item, i) => (
+          <div className="utility-step" key={item}>
+            <span>{i + 1}</span>
+            <div>
+              <strong>{item}</strong>
+              <small>{install ? 'Instalación instantánea y segura.' : 'Atención institucional de lunes a viernes.'}</small>
+            </div>
+            <ChevronRight size={16} />
+          </div>
+        ))}
+        <div className="help-contact">
+          <CircleHelp size={16} />
+          <span>¿Tienes dudas técnicas o académicas?</span>
+          <button onClick={() => action('Contacto con soporte de la DTIC')}>Contactar soporte</button>
+        </div>
+      </aside>
+    </div>
+  )
+}
