@@ -277,7 +277,7 @@ export default function PlatformPreview() {
       <main className="workspace">
         <header className="topbar"><div className="breadcrumbs"><span>Prototipo</span><ChevronRight size={14} /><span>{current.group}</span><ChevronRight size={14} /><strong>{current.name}</strong></div><div className="top-actions"><span className="preview-badge"><span /> Vista preliminar</span><button className="icon-button" aria-label="Ayuda" onClick={() => choose('P-06')}><CircleHelp size={18} /></button><button className="icon-button notification-trigger" aria-label="Abrir centro de notificaciones" onClick={() => setDialog({ kind: 'notifications' })}><Bell size={18} />{!notificationsRead && <i />}</button><div className="avatar">KG</div></div></header>
         <div className="screen-stage">
-          <div className="page-intro"><div><div className="eyebrow">{current.id} <span>•</span> {current.route}</div><h1>{screenTitle(current.id, current.name)}</h1><p>{screenSubtitle(current.id, current.name)}</p></div><button className="outline-button" onClick={() => action(`Ruta de referencia: ${current.route}`)}><ExternalLink size={15} /> Ver especificación</button></div>
+          <div className="page-intro"><div><div className="eyebrow">{current.id} <span>•</span> {current.route}</div><h1>{screenTitle(current.id, current.name)}</h1><p>{screenSubtitle(current.id, current.name)}</p></div><button className="outline-button" aria-haspopup="dialog" onClick={() => setDialog({ kind: 'information', title: `Especificación: ${current.name}`, description: 'Ficha de referencia de esta pantalla dentro del prototipo navegable.', details: [{ label: 'Código de pantalla', value: current.id }, { label: 'Ruta de referencia', value: current.route }, { label: 'Sección', value: current.group }, { label: 'Roles habilitados', value: current.roles.join(', ') }] })}><ExternalLink size={15} /> Ver especificación</button></div>
           <PrototypeScreen id={current.id} role={role} tab={tab} setTab={setTab} week={week} setWeek={setWeek} action={action} />
         </div>
         <footer className="stage-footer"><span><ShieldCheck size={14} /> Datos de ejemplo · No representa información real</span><span>Anteproyecto de grado · UNIAJC <span className="footer-sep">/</span> 2026</span></footer>
@@ -466,6 +466,32 @@ function TeacherLinksScreen({ action }: { action: (message: string) => void }) {
 }
 
 function StudentAttendanceScreen({ action }: { action: (message: string) => void }) {
+  const courses = ['Fundamentos de programación', 'Matemáticas discretas', 'Bases de datos'] as const
+  const [course, setCourse] = useState<(typeof courses)[number]>(courses[0])
+  const records: Record<(typeof courses)[number], Array<[string, string, string, string, string, string]>> = {
+    'Fundamentos de programación': [
+      ['Sesión 09','Hoy, 8 oct','10:01 a. m.','Pregunta conceptual respondida en 38 s (Bucle while)','Presente','green'],
+      ['Sesión 08','5 oct','10:03 a. m.','Pregunta conceptual respondida en 42 s (Funciones)','Presente','green'],
+      ['Sesión 07','1 oct','10:17 a. m.','Ingreso 17 min tarde · Registrado en plataforma','Tarde','amber'],
+      ['Sesión 06','28 sep','10:02 a. m.','Validada por docente (falla técnica Teams)','Confirmada','green'],
+      ['Sesión 05','24 sep','9:59 a. m.','Pregunta conceptual respondida en 27 s (Variables)','Presente','green'],
+    ],
+    'Matemáticas discretas': [
+      ['Sesión 09','Hoy, 8 oct','12:02 p. m.','Pregunta conceptual respondida en 29 s (Conjuntos)','Presente','green'],
+      ['Sesión 08','5 oct','12:06 p. m.','Pregunta conceptual respondida en 35 s (Proposiciones)','Presente','green'],
+      ['Sesión 07','1 oct','—','Sin registro de ingreso en plataforma','Ausente','rose'],
+      ['Sesión 06','28 sep','12:01 p. m.','Pregunta conceptual respondida en 31 s (Grafos)','Presente','green'],
+      ['Sesión 05','24 sep','12:11 p. m.','Ingreso 11 min tarde · Registrado en plataforma','Tarde','amber'],
+    ],
+    'Bases de datos': [
+      ['Sesión 09','Hoy, 8 oct','2:01 p. m.','Pregunta conceptual respondida en 32 s (SQL)','Presente','green'],
+      ['Sesión 08','5 oct','—','Tiempo expirado · Conexión inestable','Pendiente','amber'],
+      ['Sesión 07','1 oct','2:03 p. m.','Pregunta conceptual respondida en 27 s (Normalización)','Presente','green'],
+      ['Sesión 06','28 sep','2:14 p. m.','Ingreso 14 min tarde · Registrado en plataforma','Tarde','amber'],
+      ['Sesión 05','24 sep','2:00 p. m.','Pregunta conceptual respondida en 34 s (Relaciones)','Presente','green'],
+    ],
+  }
+
   return (
     <>
       <div className="stat-grid compact-stats">
@@ -478,14 +504,12 @@ function StudentAttendanceScreen({ action }: { action: (message: string) => void
       <section className="panel data-panel">
         <div className="data-toolbar">
           <div>
-            <span className="section-kicker">HISTORIAL PERSONAL DE ASISTENCIA (F-ASI-12)</span>
+            <span className="section-kicker">HISTORIAL PERSONAL DE ASISTENCIA · {course.toUpperCase()} (F-ASI-12)</span>
             <h2>Kevin Andrés González Dinas · Código 2200417</h2>
             <p className="toolbar-description">Registros de presencia puntual sin captura de fotografías ni datos biométricos (Ley 1581 de 2012).</p>
           </div>
-          <div className="segmented">
-            <button className="selected" type="button" aria-pressed="true">Fundamentos de programación</button>
-            <button onClick={() => action('Mostrando Matemáticas discretas')}>Matemáticas discretas</button>
-            <button onClick={() => action('Mostrando Bases de datos')}>Bases de datos</button>
+          <div className="segmented" role="group" aria-label="Filtrar asistencia por curso">
+            {courses.map((item) => <button key={item} type="button" className={course === item ? 'selected' : ''} aria-pressed={course === item} onClick={() => setCourse(item)}>{item}</button>)}
           </div>
         </div>
 
@@ -502,13 +526,7 @@ function StudentAttendanceScreen({ action }: { action: (message: string) => void
               </tr>
             </thead>
             <tbody>
-              {[
-                ['Sesión 09','Hoy, 8 oct','10:01 a. m.','Pregunta conceptual respondida en 38 s (Bucle while)','Presente','green'],
-                ['Sesión 08','5 oct','10:03 a. m.','Pregunta conceptual respondida en 42 s (Funciones)','Presente','green'],
-                ['Sesión 07','1 oct','10:17 a. m.','Ingreso 17 min tarde · Registrado en plataforma','Tarde','amber'],
-                ['Sesión 06','28 sep','10:02 a. m.','Validada por docente (falla técnica Teams)','Confirmada','green'],
-                ['Sesión 05','24 sep','9:59 a. m.','Pregunta conceptual respondida en 27 s (Variables)','Presente','green'],
-              ].map(([s,d,h,v,st,tone]) => (
+              {records[course].map(([s,d,h,v,st,tone]) => (
                 <tr key={s}>
                   <td><strong>{s}</strong></td>
                   <td>{d}</td>
@@ -1146,7 +1164,7 @@ function ResourcesScreen({id,action}:{id:string;action:(message:string)=>void}) 
             <h3>{name}</h3>
             <p>{desc}</p>
             <span className="resource-site"><ExternalLink size={13}/>{site}</span>
-            <button className="text-button" onClick={()=>action(`Abriendo ${name} en una nueva pestaña`)}>Abrir recurso <ArrowRight size={14}/></button>
+            <a className="text-button" href={`https://${site}`} target="_blank" rel="noopener noreferrer">Abrir recurso <ArrowRight size={14}/></a>
           </article>
         ))}
       </div>

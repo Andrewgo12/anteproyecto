@@ -12,9 +12,10 @@ export type DialogField = {
 }
 
 export type DialogSpec = {
-  kind?: 'notifications' | 'receipt' | 'menu'
+  kind?: 'notifications' | 'receipt' | 'menu' | 'information'
   title?: string
   description?: string
+  details?: Array<{ label: string; value: string }>
   fields?: DialogField[]
   menuOptions?: Array<{ label: string; message: string }>
   warning?: string
@@ -48,6 +49,7 @@ export default function InteractionDialog({ spec, notificationsRead, onClose, on
   const isNotifications = spec.kind === 'notifications'
   const isReceipt = spec.kind === 'receipt'
   const isMenu = spec.kind === 'menu'
+  const isInformation = spec.kind === 'information'
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -72,11 +74,11 @@ export default function InteractionDialog({ spec, notificationsRead, onClose, on
       <section className="dialog-card">
         <header className="dialog-header">
           <div className="dialog-heading-icon">
-            {isNotifications ? <Bell size={18} /> : isReceipt ? <FileCheck2 size={18} /> : spec.warning ? <AlertTriangle size={18} /> : <CalendarDays size={18} />}
+            {isNotifications ? <Bell size={18} /> : isReceipt || isInformation ? <FileCheck2 size={18} /> : spec.warning ? <AlertTriangle size={18} /> : <CalendarDays size={18} />}
           </div>
           <div className="dialog-heading-copy">
             <span className="section-kicker">
-              {isNotifications ? 'CENTRO DE ACTIVIDAD' : isReceipt ? 'CONSTANCIA DIGITAL' : spec.warning ? 'ACCIÓN DE EMERGENCIA · RB-05' : 'AULA+ · ACCIÓN RÁPIDA'}
+              {isNotifications ? 'CENTRO DE ACTIVIDAD' : isReceipt ? 'CONSTANCIA DIGITAL' : isInformation ? 'DOCUMENTACIÓN DE PANTALLA' : spec.warning ? 'ACCIÓN DE EMERGENCIA · RB-05' : 'AULA+ · ACCIÓN RÁPIDA'}
             </span>
             <h2 id="interaction-dialog-title">
               {isNotifications ? 'Tus notificaciones' : isReceipt ? 'Constancia digital de asistencia' : spec.title}
@@ -140,6 +142,13 @@ export default function InteractionDialog({ spec, notificationsRead, onClose, on
               <button className="outline-button" type="button" onClick={onClose}>Cerrar</button>
               <button className="primary-button" type="button" onClick={() => onSave('Comprobante digital descargado en PDF')}><Download size={15} />Descargar constancia</button>
             </footer>
+          </div>
+        ) : isInformation ? (
+          <div className="specification-view">
+            <div className="specification-details">
+              {(spec.details ?? []).map((detail) => <div className="specification-detail" key={detail.label}><span>{detail.label}</span><strong>{detail.value}</strong></div>)}
+            </div>
+            <footer className="dialog-footer"><button className="primary-button" type="button" onClick={onClose}>Entendido</button></footer>
           </div>
         ) : (
           <form className="dialog-form" onSubmit={handleSubmit}>
