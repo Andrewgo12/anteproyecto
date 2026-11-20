@@ -10,6 +10,7 @@ import {
   Settings2, ShieldCheck, Sparkles, Users, Video, X,
 } from 'lucide-react'
 import InteractionDialog, { type DialogSpec } from '@/components/interaction-dialog'
+import { MetricGrid } from '@/components/metric-grid'
 
 type Role = 'Estudiante' | 'Docente' | 'Administrador'
 type Screen = { id: string; name: string; route: string; roles: Role[]; group: string }
@@ -494,12 +495,12 @@ function StudentAttendanceScreen({ action }: { action: (message: string) => void
 
   return (
     <>
-      <div className="stat-grid compact-stats">
-        <div className="stat-card compact"><div className="mini-status green" /><span>Porcentaje acumulado</span><strong>94,4%</strong></div>
-        <div className="stat-card compact"><div className="mini-status blue" /><span>Sesiones asistidas</span><strong>17 / 18</strong></div>
-        <div className="stat-card compact"><div className="mini-status green" /><span>Verificadas a tiempo</span><strong>16</strong></div>
-        <div className="stat-card compact"><div className="mini-status amber" /><span>Ingresos tarde</span><strong>1</strong></div>
-      </div>
+      <MetricGrid compact items={[
+        { label: 'Porcentaje acumulado', value: '94,4%', tone: 'green' },
+        { label: 'Sesiones asistidas', value: '17 / 18', tone: 'blue' },
+        { label: 'Verificadas a tiempo', value: '16', tone: 'green' },
+        { label: 'Ingresos tarde', value: '1', tone: 'amber' },
+      ]} />
 
       <section className="panel data-panel">
         <div className="data-toolbar">
@@ -558,12 +559,12 @@ function TeacherGroupsScreen({ action }: { action: (message: string) => void }) 
   ]
   return (
     <>
-      <div className="stat-grid compact-stats">
-        <div className="stat-card compact"><div className="mini-status blue" /><span>Grupos asignados</span><strong>4</strong></div>
-        <div className="stat-card compact"><div className="mini-status mint" /><span>Estudiantes totales</span><strong>116</strong></div>
-        <div className="stat-card compact"><div className="mini-status green" /><span>Asistencia promedio</span><strong>91,8%</strong></div>
-        <div className="stat-card compact"><div className="mini-status amber" /><span>Dudas por responder</span><strong>8</strong></div>
-      </div>
+      <MetricGrid compact items={[
+        { label: 'Grupos asignados', value: '4', tone: 'blue' },
+        { label: 'Estudiantes totales', value: '116', tone: 'mint' },
+        { label: 'Asistencia promedio', value: '91,8%', tone: 'green' },
+        { label: 'Dudas por responder', value: '8', tone: 'amber' },
+      ]} />
 
       <div className="group-grid">
         {groups.map((g) => (
@@ -692,7 +693,7 @@ function Dashboard({ id, action }: {id:string; action:(message:string)=>void}) {
   const admin = id === 'P-22', teacher = id === 'P-14'
   return <>
     <div className="welcome-line"><div className="welcome-date"><CalendarDays size={15} /> Jueves, 8 de octubre de 2026 <span>·</span> Jornada mañana</div><button className="text-button" onClick={() => action('Mostrando calendario de la semana')}><CalendarDays size={15} /> Ver calendario</button></div>
-    <div className="stat-grid">{(admin ? [['Grupos activos','24','+3 este periodo','blue'],['Estudiantes','846','En 24 grupos','purple'],['Sesiones hoy','18','4 en curso','mint'],['Disponibilidad','99,8%','Últimos 30 días','amber']] : teacher ? [['Mis cursos','4','2 clases esta semana','blue'],['Dudas pendientes','8','3 nuevas hoy','amber'],['Tareas por vencer','3','Próximos 7 días','rose'],['Asistencia reciente','92%','Promedio del periodo','mint']] : [['Clases hoy','3','Próxima a las 10:00 a. m.','blue'],['Asistencia','92%','Este periodo','mint'],['Entregas próximas','2','Una para mañana','amber'],['Dudas respondidas','4','En esta semana','purple']]).map(([label,value,desc,color]) => <div className="stat-card" key={label}><div className={`stat-icon ${color}`}>{label.includes('Clases')||label.includes('Sesiones') ? <CalendarDays size={17}/> : label.includes('Dudas') ? <BookOpen size={17}/> : label.includes('Disponibilidad') ? <Activity size={17}/> : label.includes('Estudiantes') ? <Users size={17}/> : label.includes('Asistencia') ? <ClipboardCheck size={17}/> : <Clock3 size={17}/>}</div><span>{label}</span><strong>{value}</strong><small>{desc}</small></div>)}</div>
+    <MetricGrid items={(admin ? [['Grupos activos','24','+3 este periodo','blue'],['Estudiantes','846','En 24 grupos','purple'],['Sesiones hoy','18','4 en curso','mint'],['Disponibilidad','99,8%','Últimos 30 días','amber']] : teacher ? [['Mis cursos','4','2 clases esta semana','blue'],['Dudas pendientes','8','3 nuevas hoy','amber'],['Tareas por vencer','3','Próximos 7 días','rose'],['Asistencia reciente','92%','Promedio del periodo','mint']] : [['Clases hoy','3','Próxima a las 10:00 a. m.','blue'],['Asistencia','92%','Este periodo','mint'],['Entregas próximas','2','Una para mañana','amber'],['Dudas respondidas','4','En esta semana','purple']]).map(([label,value,description,tone]) => ({ label, value, description, tone, icon: label.includes('Clases') || label.includes('Sesiones') ? CalendarDays : label.includes('Dudas') ? BookOpen : label.includes('Disponibilidad') ? Activity : label.includes('Estudiantes') ? Users : label.includes('Asistencia') ? ClipboardCheck : Clock3 }))} />
     <div className="dashboard-columns"><section className="panel next-class"><div className="panel-heading"><div><span className="section-kicker">{admin ? 'ACTIVIDAD ACADÉMICA' : 'TU SIGUIENTE CLASE'}</span><h2>{admin ? 'Panorama de hoy' : teacher ? 'Próxima clase' : 'Fundamentos de programación'}</h2></div><button className="more-button" aria-label="Más opciones de la próxima clase" onClick={() => action('Opciones de la próxima clase')}><MoreHorizontal size={19}/></button></div><div className="class-detail"><div className="subject-icon"><BookOpen size={20}/></div><div className="class-copy"><strong>{admin ? 'Sesiones activas' : teacher ? 'Ingeniería de software' : 'Fundamentos de programación'}</strong><span>{admin ? '4 clases en curso en sede norte' : 'Grupo 841A · Aula virtual en Teams'}</span></div><span className="time-pill"><span/> {admin ? 'EN VIVO' : '10:00 a. m.'}</span></div><div className="class-meta"><span><Clock3 size={14}/>{admin ? 'Actualizado hace 2 min' : 'Hoy · 10:00 – 11:30 a. m.'}</span><span><Users size={14}/>{admin ? '4 docentes conectados' : '32 estudiantes'}</span></div>{!admin && <div className="join-link"><div className="link-icon"><Link2 size={17}/></div><div><small>ENLACE VIGENTE</small><strong>teams.microsoft.com / reunión-841a</strong></div><button aria-label="Copiar enlace" onClick={() => action('Enlace copiado al portapapeles')}><Link2 size={16}/></button><button className="join-button" onClick={() => action('Abriendo la clase virtual')}>Ingresar <ArrowRight size={15}/></button></div>}</section>
     <section className="panel today-panel"><div className="panel-heading"><div><span className="section-kicker">{admin ? 'ESTADO DEL SISTEMA' : 'AGENDA DE HOY'}</span><h2>{admin ? 'Estado general' : 'Tu jornada'}</h2></div><span className="live-tag"><i/> Al día</span></div>{admin ? <div className="system-list"><div><span className="system-dot green"/><span>Servicio de plataforma</span><strong>Operativo</strong></div><div><span className="system-dot green"/><span>Disponibilidad mensual</span><strong>99,8%</strong></div><div><span className="system-dot amber"/><span>Reclamaciones abiertas</span><strong>2 pendientes</strong></div></div> : <div className="agenda-list"><AgendaItem time="8:00" title="Matemáticas discretas" place="Meet · Grupo 841A" status="Finalizada" tone="muted"/><AgendaItem time="10:00" title="Fundamentos de programación" place="Teams · Grupo 841A" status="En 20 min" tone="blue"/><AgendaItem time="2:00" title="Bases de datos" place="Zoom · Grupo 831B" status="Próxima" tone="amber"/></div>}</section></div>
     <div className="bottom-panels"><section className="panel mini-panel"><div className="panel-heading"><div><span className="section-kicker">{admin ? 'GESTIÓN' : 'PARA HOY'}</span><h2>{admin ? 'Accesos rápidos' : teacher ? 'Pendientes del curso' : 'Lo que sigue'}</h2></div><button className="text-button" onClick={() => action('Abriendo el detalle')}>Ver todo <ArrowRight size={14}/></button></div><div className="quick-list">{(admin ? [['+','Crear grupo','Nuevo grupo académico'],['U','Gestionar usuarios','Revisar cuentas activas'],['A','Ver auditoría','Últimos movimientos']] : teacher ? [['?','Responder dudas','3 preguntas nuevas'],['↗','Revisar entregas','2 vencen esta semana'],['✓','Tomar asistencia','Clase de las 10:00 a. m.']] : [['✓','Confirmar asistencia','Fundamentos de programación'],['↗','Entrega de programación','Vence mañana, 11:59 p. m.'],['?','Revisar respuestas','Muro de dudas del curso']]).map(([icon,title,desc])=><button key={title} className="quick-row" onClick={() => action(`${title}: acción de demostración`)}><span className="quick-dot">{icon}</span><span><strong>{title}</strong><small>{desc}</small></span><ChevronRight size={16}/></button>)}</div></section><section className="panel tip-panel"><div className="tip-top"><div className="tip-icon"><Sparkles size={16}/></div><span>UN CONSEJO</span></div><h2>{admin ? 'Tu gestión, más simple' : 'Todo en un solo lugar'}</h2><p>{admin ? 'Organiza los grupos del nuevo periodo desde el módulo de Grupos.' : 'Encuentra enlaces, tareas y avisos de tus cursos sin cambiar de plataforma.'}</p><button className="tip-link" onClick={() => action('Abriendo guía rápida')}>Explorar guía <ArrowRight size={14}/></button></section></div>
@@ -843,12 +844,12 @@ function AttendanceReportScreen({ action }: { action: (message: string) => void 
 
   return (
     <>
-      <div className="stat-grid compact-stats">
-        <div className="stat-card compact"><div className="mini-status green" /><span>Asistencia promedio</span><strong>91,7%</strong></div>
-        <div className="stat-card compact"><div className="mini-status green" /><span>Estudiantes al día (&gt;80%)</span><strong>30 / 32</strong></div>
-        <div className="stat-card compact"><div className="mini-status rose" /><span>En riesgo (&lt;80%)</span><strong>2</strong></div>
-        <div className="stat-card compact"><div className="mini-status blue" /><span>Sesiones computadas</span><strong>9 / 16</strong></div>
-      </div>
+      <MetricGrid compact items={[
+        { label: 'Asistencia promedio', value: '91,7%', tone: 'green' },
+        { label: 'Estudiantes al día (>80%)', value: '30 / 32', tone: 'green' },
+        { label: 'En riesgo (<80%)', value: '2', tone: 'rose' },
+        { label: 'Sesiones computadas', value: '9 / 16', tone: 'blue' },
+      ]} />
 
       <section className="panel data-panel">
         <div className="data-toolbar">
